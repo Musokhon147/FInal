@@ -4,6 +4,7 @@
  * board → globe · everything else → slow starfield. The cursor pushes particles aside.
  */
 import * as THREE from "three";
+import { lowPower } from "@/lib/fx";
 
 export type SceneMode = "star" | "split4" | "book" | "stack" | "globe" | "field" | `text:${string}` | `glyph:${string}`;
 export type SceneApi = { setMode(m: SceneMode): void; setTheme(light: boolean): void; burst(): void; dispose(): void };
@@ -13,14 +14,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   const noop: SceneApi = { setMode() {}, setTheme() {}, burst() {}, dispose() {} };
   let renderer: THREE.WebGLRenderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" }); } catch { return noop; }
-  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-  const small = innerWidth < 640 || (mem !== undefined && mem <= 4);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, small ? 1.5 : 2));
+  const small = lowPower();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, small ? 1 : 2));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
   camera.position.set(0, 0, 9);
 
-  const N = small ? 4500 : 9000;
+  const N = small ? 2400 : 9000;
   const rand = (a: number, b: number) => a + Math.random() * (b - a);
   const PAL = {
     dark: { gold: "#e8b13a", turq: "#3cc8bb", ivory: "#f6f2e7", lapis: "#5a7ee0" },
@@ -157,7 +157,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       const key = Math.floor(star[i * 3] / cell) + "," + Math.floor(star[i * 3 + 1] / cell);
       if (!grid.has(key)) grid.set(key, []); grid.get(key)!.push(i);
     }
-    const maxPairs = small ? 350 : 800;
+    const maxPairs = small ? 0 : 800;
     for (const list of grid.values()) {
       for (let a = 0; a < list.length && pairs.length < maxPairs; a += 6) {
         const i = list[a], j = list[(a + 3) % list.length];
@@ -253,8 +253,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   window.addEventListener("scroll", onScroll, { passive: true });
   document.addEventListener("visibilitychange", onVis);
   const inv = new THREE.Matrix4();
+  let skip = false;
   function frame() {
     if (!running) return;
+    if (small && !reduce) { skip = !skip; if (skip) { raf = requestAnimationFrame(frame); return; } } // 30 fps on weaker devices
     const dt = Math.min(clock.getDelta(), 0.1);
     T += dt; const t = T;
     const isStar = mode === "star";

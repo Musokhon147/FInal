@@ -225,10 +225,8 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
             {range && <div><dt className="text-slate-500">{t("article.pages")}</dt><dd>{range}</dd></div>}
             {a.doi && <div><dt className="text-slate-500">DOI</dt><dd><a className="break-all text-brand-700 hover:underline" href={doiUrl}>{a.doi}</a></dd></div>}
             <div><dt className="text-slate-500">{t("article.license")}</dt><dd>{a.license}</dd></div>
-            <div className="flex gap-6">
-              <div><dt className="text-slate-500">{t("article.views")}</dt><dd>{a.views}</dd></div>
-              <div><dt className="text-slate-500">{t("article.downloads")}</dt><dd>{a.downloads}</dd></div>
-            </div>
+            <div className="inline-block pr-6"><dt className="text-slate-500">{t("article.views")}</dt><dd>{a.views}</dd></div>
+            <div className="inline-block"><dt className="text-slate-500">{t("article.downloads")}</dt><dd>{a.downloads}</dd></div>
           </dl>
         </aside>
       </div>

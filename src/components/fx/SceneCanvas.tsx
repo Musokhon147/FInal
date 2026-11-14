@@ -20,26 +20,44 @@ export default function SceneCanvas() {
   const modeRef = useRef(modeFor(pathname));
 
   useEffect(() => {
-    let alive = true;
-    let observer: MutationObserver | undefined;
+    let alive = true, loading = false, idle = 0;
+    const root = document.documentElement;
     const onBurst = () => api.current?.burst();
-    import("@/lib/scene").then(({ createScene }) => {
-      if (!alive || !ref.current) return;
-      const s = createScene(ref.current);
-      api.current = s;
-      s.setMode((document.querySelector("[data-scene]")?.getAttribute("data-scene") as SceneMode | null) || modeRef.current);
-      const sync = () => s.setTheme(document.documentElement.classList.contains("light"));
-      sync();
-      window.addEventListener("scene:burst", onBurst);
-      observer = new MutationObserver(sync);
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    const start = () => {
+      if (!alive || loading || api.current || root.classList.contains("fx-off")) return;
+      loading = true;
+      import("@/lib/scene").then(({ createScene }) => {
+        loading = false;
+        if (!alive || !ref.current || root.classList.contains("fx-off")) return;
+        const s = createScene(ref.current);
+        api.current = s;
+        s.setMode((document.querySelector("[data-scene]")?.getAttribute("data-scene") as SceneMode | null) || modeRef.current);
+        s.setTheme(root.classList.contains("light"));
+        ref.current.classList.add("is-ready");
+      });
+    };
+    const stop = () => { api.current?.dispose(); api.current = null; ref.current?.classList.remove("is-ready"); };
+    // the page comes first: build the 3D scene once the browser is idle after load
+    const later = () => {
+      const ric = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+      idle = ric ? ric(start, { timeout: 2500 }) : window.setTimeout(start, 1200);
+    };
+    if (document.readyState === "complete") later(); else window.addEventListener("load", later, { once: true });
+    // follow theme changes and the effects switch
+    const observer = new MutationObserver(() => {
+      if (root.classList.contains("fx-off")) stop(); else if (!api.current) start();
+      api.current?.setTheme(root.classList.contains("light"));
     });
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("scene:burst", onBurst);
     return () => {
       alive = false;
-      observer?.disconnect();
+      clearTimeout(idle);
+      (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(idle);
+      window.removeEventListener("load", later);
+      observer.disconnect();
       window.removeEventListener("scene:burst", onBurst);
-      api.current?.dispose();
-      api.current = null;
+      stop();
     };
   }, []);
 
@@ -65,5 +83,5 @@ export default function SceneCanvas() {
     return () => { cancelAnimationFrame(id); io?.disconnect(); };
   }, [pathname]);
 
-  return <canvas ref={ref} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-full w-full print:hidden" />;
+  return <canvas ref={ref} aria-hidden="true" className="scene-canvas pointer-events-none fixed inset-0 z-0 h-full w-full print:hidden" />;
 }

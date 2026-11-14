@@ -391,6 +391,8 @@
     "exploreText": "Each point is an article. Articles that share keywords are joined by lines. Turn, zoom and click a point to open it.",
     "exploreLink": "Open the article map",
     "sharedKeywords": "Shared keywords",
-    "toTop": "Back to top"
+    "toTop": "Back to top",
+    "fxTurnOff": "Turn effects off",
+    "fxTurnOn": "Turn effects on"
   }
 }

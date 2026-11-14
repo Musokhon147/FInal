@@ -1,5 +1,6 @@
 "use client";
 
+import { fxOff } from "@/lib/fx";
 import { useEffect, useRef } from "react";
 import { usePathname } from "@/i18n/navigation";
 
@@ -58,7 +59,7 @@ export default function Delight() {
 
   // per page: scramble headings once when they come into view, confetti if a submit/publish just happened
   useEffect(() => {
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = fxOff();
     let fire = false;
     try { fire = sessionStorage.getItem("celebrate") === "1"; sessionStorage.removeItem("celebrate"); } catch {}
     const timer = fire && !reduce ? window.setTimeout(confetti, 450) : 0;
@@ -72,7 +73,7 @@ export default function Delight() {
 
   // global: ring that trails the cursor (mouse only) and ripples on card clicks
   useEffect(() => {
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = fxOff();
     const el = ring.current;
     const fine = matchMedia("(pointer: fine)").matches;
     let raf = 0, tx = -100, ty = -100, x = -100, y = -100, shown = false;

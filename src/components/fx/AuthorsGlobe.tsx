@@ -1,5 +1,6 @@
 "use client";
 
+import { fxOff } from "@/lib/fx";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
@@ -17,7 +18,7 @@ export default function AuthorsGlobe({ points }: { points: GlobePoint[] }) {
     let cleanup = () => {};
     import("three").then((THREE) => {
       if (disposed) return;
-      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduce = fxOff();
       let renderer: InstanceType<typeof THREE.WebGLRenderer>;
       try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); } catch { return; }
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));

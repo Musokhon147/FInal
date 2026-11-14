@@ -1,5 +1,6 @@
 "use client";
 
+import { fxOff } from "@/lib/fx";
 import { useEffect } from "react";
 
 const STAR = "M20 2l5.2 7.6 9-1.8-1.8 9L40 20l-7.6 5.2 1.8 9-9-1.8L20 40l-5.2-7.6-9 1.8 1.8-9L0 20l7.6-5.2-1.8-9 9 1.8z";
@@ -10,7 +11,7 @@ const STAR = "M20 2l5.2 7.6 9-1.8-1.8 9L40 20l-7.6 5.2 1.8 9-9-1.8L20 40l-5.2-7.
  */
 export default function ClickSparks() {
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (fxOff()) return;
     const layer = document.createElement("div");
     layer.setAttribute("aria-hidden", "true");
     layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden";

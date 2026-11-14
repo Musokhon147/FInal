@@ -1,5 +1,6 @@
 "use client";
 
+import { fxOff } from "@/lib/fx";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -20,7 +21,7 @@ export default function ArticleNetwork({ nodes, edges }: { nodes: NetNode[]; edg
     let disposed = false, raf = 0, cleanup = () => {};
     Promise.all([import("three"), import("three/examples/jsm/controls/OrbitControls.js")]).then(([THREE, { OrbitControls }]) => {
       if (disposed) return;
-      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduce = fxOff();
       let renderer: InstanceType<typeof THREE.WebGLRenderer>;
       try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); } catch { return; }
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -45,6 +46,10 @@ export default function ArticleNetwork({ nodes, edges }: { nodes: NetNode[]; edg
         }
         P.forEach((p, i) => p.add(F[i].clampLength(0, 0.5)).multiplyScalar(0.995));
       }
+      // centre the cloud and scale it to a fixed radius so every point is in view
+      const c = P.reduce((a, p) => a.add(p), new THREE.Vector3()).divideScalar(P.length);
+      const maxR = Math.max(...P.map((p) => p.sub(c).length()), 0.001);
+      P.forEach((p) => p.multiplyScalar(5.5 / maxR));
 
       const css = getComputedStyle(document.documentElement);
       const col = (v: string) => new THREE.Color(`rgb(${css.getPropertyValue(v).trim().split(/\s+/).join(",")})`);
@@ -93,7 +98,11 @@ export default function ArticleNetwork({ nodes, edges }: { nodes: NetNode[]; edg
       canvas.addEventListener("pointerup", up);
       canvas.addEventListener("pointerleave", () => setHover(null));
 
-      const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+      const resize = () => {
+        const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
+        camera.position.setLength(18 / Math.min(1, camera.aspect * 1.25)); // step back on narrow screens so the whole map fits
+        camera.updateProjectionMatrix();
+      };
       resize();
       const ro = new ResizeObserver(resize); ro.observe(canvas);
       const frame = () => { controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(frame); };

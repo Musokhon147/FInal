@@ -75,7 +75,7 @@ export default async function BoardPage({ params }: PageProps<"/[locale]/board">
       {grp("member").length > 0 && <><h2 className="mt-12 text-xl">{t("x.g_member")}</h2><ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{grp("member").map(person)}</ul></>}
 
       {points.length > 0 && (
-        <section data-reveal className="card mt-16 grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_280px] lg:items-center">
+        <section data-reveal className="card mt-16 grid grid-cols-[minmax(0,1fr)] gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center">
           <AuthorsGlobe points={points} />
           <div>
             <h2 className="text-2xl">{t("x.authorsWorld")}</h2>

@@ -50,7 +50,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   return (
     <div className="-mt-10 space-y-6">
       {/* hero — the particle star sits to the right on wide screens */}
-      <section className="relative isolate flex min-h-[calc(100vh-7rem)] items-center pb-16 pt-10">
+      <section className="relative isolate flex min-h-[calc(100vh-7rem)] items-center overflow-x-clip pb-16 pt-10">
         <div data-parallax="0.18" className="absolute inset-0 -z-10"><HeroTiles /></div>
         <div data-parallax="-0.12" className="max-w-2xl">
           <FoldTitle text={tr(journal?.title, locale)} delay={0.3}

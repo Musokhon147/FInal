@@ -6,6 +6,7 @@ import { formatDate, tr } from "@/lib/i18n-field";
 import type { Notification } from "@/lib/types";
 import LanguageSwitcher from "./LanguageSwitcher";
 import ThemeToggle from "./fx/ThemeToggle";
+import FxToggle from "./fx/FxToggle";
 import NotificationBell, { type BellItem } from "./fx/NotificationBell";
 import { Logo } from "./design/StarMark";
 import { logout } from "@/app/[locale]/(auth)/actions";
@@ -36,10 +37,10 @@ export default async function Header() {
   const name = tr(journal?.title, locale) || "Journal";
   return (
     <header className="sticky top-0 z-40 print:hidden border-b border-white/5 bg-slate-50/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center gap-6 px-5 py-3">
-        <Link href="/" className="flex shrink-0 items-center gap-3">
-          <Logo url={journal?.logo_url} size={30} />
-          <span className="font-serif text-lg tracking-tight text-slate-900">{name}</span>
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6 sm:px-5">
+        <Link href="/" className="flex min-w-0 items-center gap-3 xl:shrink-0">
+          <span className="shrink-0"><Logo url={journal?.logo_url} size={30} /></span>
+          <span className="truncate font-serif text-base tracking-tight text-slate-900 max-[379px]:sr-only sm:text-lg">{name}</span>
         </Link>
         <nav className="hidden flex-1 items-center gap-5 whitespace-nowrap text-sm xl:flex" aria-label="Main">
           <Link href="/current" className="navlink">{t("nav.current")}</Link>
@@ -54,8 +55,9 @@ export default async function Header() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           </Link>
         </nav>
-        <div className="ml-auto flex items-center gap-3 whitespace-nowrap">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-3">
           {user && <NotificationBell items={bell} />}
+          <FxToggle />
           <ThemeToggle />
           <LanguageSwitcher />
           {user ? (

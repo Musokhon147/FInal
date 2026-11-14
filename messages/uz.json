@@ -391,6 +391,8 @@
     "exploreText": "Har bir nuqta — maqola. Umumiy kalit so'zlarga ega maqolalar chiziq bilan bog'langan. Aylantiring, yaqinlashtiring va ochish uchun bosing.",
     "exploreLink": "Maqolalar xaritasini ochish",
     "sharedKeywords": "Umumiy kalit so'zlar",
-    "toTop": "Yuqoriga qaytish"
+    "toTop": "Yuqoriga qaytish",
+    "fxTurnOff": "Effektlarni o'chirish",
+    "fxTurnOn": "Effektlarni yoqish"
   }
 }

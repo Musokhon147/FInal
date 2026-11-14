@@ -1,11 +1,12 @@
 "use client";
 
+import { fxOff } from "@/lib/fx";
 import { useEffect } from "react";
 
 /** Now and then a gold streak crosses the night sky (dark theme only). */
 export default function ShootingStars() {
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (fxOff()) return;
     let timer: ReturnType<typeof setTimeout>;
     const spawn = () => {
       if (!document.hidden && !document.documentElement.classList.contains("light")) {

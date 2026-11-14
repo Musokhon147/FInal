@@ -1,5 +1,6 @@
 "use client";
 
+import { fxOff } from "@/lib/fx";
 import { useEffect } from "react";
 import { usePathname } from "@/i18n/navigation";
 
@@ -12,7 +13,7 @@ export default function Effects() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = fxOff();
     if (typeof (document as { startViewTransition?: unknown }).startViewTransition !== "function") {
       // older browsers: simple fade instead of the star wipe
       document.getElementById("page")?.classList.remove("page-enter");
@@ -78,7 +79,7 @@ export default function Effects() {
   useEffect(() => {
     let current: HTMLElement | null = null, magnet: HTMLElement | null = null;
     const move = (e: PointerEvent) => {
-      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (fxOff()) return;
       const target = e.target as Element;
 
       // light that follows the cursor on cards
