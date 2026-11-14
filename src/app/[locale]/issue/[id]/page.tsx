@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { cleanHtml } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, tr } from "@/lib/i18n-field";
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/issue/[i
   if (!issue) return {};
   const t = await getTranslations();
   const locale = await getLocale();
-  return { title: [issueLabel(t, issue), tr(issue.title, locale)].filter(Boolean).join(" — ") };
+  return { title: [issueLabel(t, issue), tr(issue.title, locale)].filter(Boolean).join(" — "), alternates: alternates(locale, `/issue/${id}`) };
 }
 
 export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[id]">) {

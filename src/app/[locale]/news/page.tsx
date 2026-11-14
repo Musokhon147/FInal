@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import type { NewsItem } from "@/lib/types";
 import NewsCard from "@/components/design/NewsCard";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("x");
-  return { title: t("news") };
+  const locale = await getLocale();
+  return { title: t("news"), alternates: alternates(locale, "/news") };
 }
 
 export default async function NewsPage({ params }: PageProps<"/[locale]/news">) {

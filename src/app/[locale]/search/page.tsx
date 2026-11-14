@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import ArticleList, { ARTICLE_LIST_SELECT, type ListedArticle } from "@/components/public/ArticleList";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("search");
-  return { title: t("title") };
+  const locale = await getLocale();
+  return { title: t("title"), alternates: alternates(locale, "/search") };
 }
 
 export default async function SearchPage({ params, searchParams }: PageProps<"/[locale]/search">) {

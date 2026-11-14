@@ -11,6 +11,7 @@ import Effects from "@/components/fx/Effects";
 import { THEME_SCRIPT } from "@/components/fx/ThemeToggle";
 import { getJournal } from "@/lib/data";
 import { tr } from "@/lib/i18n-field";
+import { SITE_URL } from "@/lib/site";
 import "../globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,8 +19,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const journal = await getJournal();
   const name = tr(journal?.title, locale) || "Journal";
   return {
+    metadataBase: new URL(SITE_URL),
     title: { default: name, template: `%s | ${name}` },
     description: tr(journal?.description, locale),
+    openGraph: { siteName: name, type: "website", locale: locale === "uz" ? "uz_UZ" : locale === "ru" ? "ru_RU" : "en_GB" },
+    twitter: { card: "summary_large_image" },
   };
 }
 

@@ -10,6 +10,7 @@ import { formatDate, tr, trExact, type I18nText } from "@/lib/i18n-field";
 import { issueLabel } from "@/lib/issue-label";
 import type { Article } from "@/lib/types";
 import CiteBox from "@/components/fx/CiteBox";
+import { alternates, SITE_URL } from "@/lib/site";
 
 type FullArticle = Article & {
   sections: { title: I18nText } | null;
@@ -28,33 +29,62 @@ async function load(id: string) {
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/article/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const [a, journal, locale] = await Promise.all([load(id), getJournal(), getLocale()]);
+  const [a, locale] = await Promise.all([load(id), getLocale()]);
   if (!a) return {};
-  const date = a.published_at?.slice(0, 10).replaceAll("-", "/");
-
-  // Google Scholar / Highwire Press tags
-  const other: Record<string, string | string[]> = {
-    citation_title: a.title,
-    citation_author: a.authors.map((x) => x.name),
-    citation_journal_title: tr(journal?.title, "en") || tr(journal?.title, locale),
-    citation_language: a.language,
-    citation_keywords: a.keywords.join("; "),
-  };
-  if (date) other.citation_publication_date = date;
-  if (a.issues?.volumes) other.citation_volume = String(a.issues.volumes.number);
-  if (a.issues) other.citation_issue = String(a.issues.number);
-  if (a.first_page) other.citation_firstpage = String(a.first_page);
-  if (a.last_page) other.citation_lastpage = String(a.last_page);
-  if (a.doi) other.citation_doi = a.doi;
-  if (journal?.issn_online) other.citation_issn = journal.issn_online;
-  if (journal?.publisher) other.citation_publisher = journal.publisher;
-  if (a.pdf_path) other.citation_pdf_url = publicFileUrl("articles", a.pdf_path);
-
+  const title = trExact(a.title_i18n, locale) || a.title;
+  const description = (trExact(a.abstract_i18n, locale) || a.abstract).slice(0, 300);
   return {
-    title: trExact(a.title_i18n, locale) || a.title,
-    description: (trExact(a.abstract_i18n, locale) || a.abstract).slice(0, 300),
-    other,
+    title,
+    description,
+    alternates: alternates(locale, `/article/${a.id}`),
+    openGraph: { type: "article", title, description, publishedTime: a.published_at ?? undefined, authors: a.authors.map((x) => x.name) },
   };
+}
+
+/**
+ * Google Scholar (Highwire Press) tags. Rendered as elements so the order is
+ * kept — Scholar expects each citation_author_institution right after its author.
+ * React places <meta> tags in <head>.
+ */
+function ScholarTags({ a, journalTitle, issn, publisher, locale }: { a: FullArticle; journalTitle: string; issn?: string | null; publisher?: string | null; locale: string }) {
+  const date = a.published_at?.slice(0, 10).replaceAll("-", "/");
+  const url = `${SITE_URL}/${locale}/article/${a.id}`;
+  const m = (name: string, content: string | number | null | undefined, key?: string | number) =>
+    content === null || content === undefined || content === "" ? null : <meta key={key ?? name} name={name} content={String(content)} />;
+  return (
+    <>
+      {m("citation_title", a.title)}
+      {a.authors.flatMap((au, i) => [m("citation_author", au.name, `au${i}`), m("citation_author_institution", au.affiliation, `inst${i}`), au.orcid ? m("citation_author_orcid", `https://orcid.org/${au.orcid}`, `orcid${i}`) : null])}
+      {m("citation_publication_date", date)}
+      {m("citation_journal_title", journalTitle)}
+      {m("citation_issn", issn)}
+      {m("citation_publisher", publisher)}
+      {m("citation_volume", a.issues?.volumes?.number)}
+      {m("citation_issue", a.issues?.number)}
+      {m("citation_firstpage", a.first_page)}
+      {m("citation_lastpage", a.last_page)}
+      {m("citation_doi", a.doi)}
+      {m("citation_language", a.language)}
+      {m("citation_keywords", a.keywords.join("; "))}
+      {m("citation_abstract_html_url", url)}
+      {a.pdf_path ? m("citation_pdf_url", publicFileUrl("articles", a.pdf_path).startsWith("/") ? `${SITE_URL}${publicFileUrl("articles", a.pdf_path)}` : publicFileUrl("articles", a.pdf_path)) : null}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "ScholarlyArticle",
+        headline: a.title,
+        name: a.title,
+        author: a.authors.map((au) => ({ "@type": "Person", name: au.name, affiliation: au.affiliation ? { "@type": "Organization", name: au.affiliation } : undefined })),
+        datePublished: a.published_at ?? undefined,
+        inLanguage: a.language,
+        keywords: a.keywords.join(", "),
+        abstract: a.abstract,
+        url,
+        identifier: a.doi ? { "@type": "PropertyValue", propertyID: "DOI", value: a.doi } : undefined,
+        isPartOf: { "@type": "Periodical", name: journalTitle, issn: issn ?? undefined },
+        license: "https://creativecommons.org/licenses/by/4.0/",
+      }).replace(/</g, "\\u003c") }} />
+    </>
+  );
 }
 
 function H2({ id, children }: { id: string; children: React.ReactNode }) {
@@ -93,6 +123,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
 
   return (
     <>
+      <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issn={journal?.issn_online} publisher={journal?.publisher} locale={locale} />
       <div id="readbar" className="read-progress" aria-hidden="true" />
       <div className="grid gap-8 lg:grid-cols-[1fr_290px]">
         <article id="article-body" className="card p-6 sm:p-10">

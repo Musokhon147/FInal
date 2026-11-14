@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { cleanHtml } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, tr } from "@/lib/i18n-field";
@@ -17,7 +18,8 @@ async function load(id: string) {
 export async function generateMetadata({ params }: PageProps<"/[locale]/news/[id]">): Promise<Metadata> {
   const { id } = await params;
   const n = await load(id);
-  return n ? { title: tr(n.title, await getLocale()) } : {};
+  const locale = await getLocale();
+  return n ? { title: tr(n.title, locale), alternates: alternates(locale, `/news/${id}`), openGraph: { type: "article" } } : {};
 }
 
 export default async function NewsItemPage({ params }: PageProps<"/[locale]/news/[id]">) {

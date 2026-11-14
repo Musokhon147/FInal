@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { tr } from "@/lib/i18n-field";
 import type { BoardMember } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("board");
-  return { title: t("title") };
+  const locale = await getLocale();
+  return { title: t("title"), alternates: alternates(locale, "/board") };
 }
 
 function Avatar({ m, size, locale }: { m: BoardMember; size: number; locale: string }) {

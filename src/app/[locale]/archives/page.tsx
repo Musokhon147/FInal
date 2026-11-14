@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, tr, type I18nText } from "@/lib/i18n-field";
 import IssueCover from "@/components/design/IssueCover";
@@ -9,7 +10,8 @@ import { topicOf } from "@/components/public/ArticleList";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("archives");
-  return { title: t("title") };
+  const locale = await getLocale();
+  return { title: t("title"), alternates: alternates(locale, "/archives") };
 }
 
 type Row = {

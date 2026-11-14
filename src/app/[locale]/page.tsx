@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { cfpWindow, getJournal, getJournalNumbers } from "@/lib/data";
 import { formatDate, tr } from "@/lib/i18n-field";
@@ -10,6 +11,11 @@ import ArticleList, { ARTICLE_LIST_SELECT, topicOf, type ListedArticle } from "@
 import IssueCover from "@/components/design/IssueCover";
 import Countdown from "@/components/fx/Countdown";
 import NewsCard from "@/components/design/NewsCard";
+
+export async function generateMetadata({ params }: PageProps<"/[locale]">) {
+  const { locale } = await params;
+  return { alternates: alternates(locale, "") };
+}
 
 export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const locale = await initLocale(params);

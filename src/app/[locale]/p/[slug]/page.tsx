@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { initLocale } from "@/lib/locale";
+import { alternates } from "@/lib/site";
 import { cleanHtml } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { tr } from "@/lib/i18n-field";
@@ -16,7 +17,8 @@ async function load(slug: string) {
 export async function generateMetadata({ params }: PageProps<"/[locale]/p/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const page = await load(slug);
-  return page ? { title: tr(page.title, await getLocale()) } : {};
+  const locale = await getLocale();
+  return page ? { title: tr(page.title, locale), alternates: alternates(locale, `/p/${slug}`) } : {};
 }
 
 export default async function StaticPage({ params }: PageProps<"/[locale]/p/[slug]">) {
