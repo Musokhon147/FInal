@@ -1,0 +1,58 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
+import { uploadArticlePdf } from "@/components/admin/uploadPdf";
+import { publishSubmission } from "../../actions";
+
+export default function PublishForm({ submissionId, issues }: { submissionId: string; issues: { id: string; label: string }[] }) {
+  const t = useTranslations();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    setBusy(true);
+    setError(null);
+    try {
+      const file = f.get("pdf") as File | null;
+      const pdfPath = file?.size ? await uploadArticlePdf(file) : null;
+      const num = (k: string) => (f.get(k) ? Number(f.get(k)) : null);
+      const articleId = await publishSubmission({
+        submissionId,
+        issueId: String(f.get("issue_id")),
+        firstPage: num("first_page"),
+        lastPage: num("last_page"),
+        doi: String(f.get("doi") || "") || null,
+        pdfPath,
+      });
+      router.push(`/admin/articles/${articleId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.error"));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="card space-y-3 border-emerald-200">
+      <h2 className="text-lg">{t("admin.publish")}</h2>
+      <div>
+        <label className="label">{t("admin.selectIssue")}</label>
+        <select name="issue_id" className="input" required>
+          {issues.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div><label className="label">{t("admin.firstPage")}</label><input name="first_page" type="number" min={1} className="input" /></div>
+        <div><label className="label">{t("admin.lastPage")}</label><input name="last_page" type="number" min={1} className="input" /></div>
+      </div>
+      <div><label className="label">{t("admin.doi")}</label><input name="doi" className="input" placeholder="10.xxxx/xxxx" /></div>
+      <div><label className="label">{t("admin.finalPdf")}</label><input name="pdf" type="file" accept="application/pdf" className="input" /></div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <button className="btn-primary w-full" disabled={busy || !issues.length}>{busy ? t("common.loading") : t("admin.publish")}</button>
+    </form>
+  );
+}

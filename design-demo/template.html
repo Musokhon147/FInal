@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scientific Journal — website demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script>/*__THREE__*/</script>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<canvas id="scene" class="pointer-events-none fixed inset-0 z-0 h-full w-full" aria-hidden="true"></canvas>
+<div id="app" class="relative z-10"></div>
+<div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-brand-600/40 bg-slate-100 px-5 py-2.5 text-sm text-slate-900 opacity-0 shadow-lg transition-opacity" role="status" aria-live="polite"></div>
+
+<script>
+const MESSAGES = /*__MESSAGES__*/;
+const SEED = /*__SEED__*/;
+
+/* ---------------------------------------------------------------- state */
+const STORE_KEY = "journal-demo-v2";
+const EXTRA = {
+  uz: { reset: "Demo ma'lumotlarni tiklash", fileNote: "Demo rejimda fayllar saqlanmaydi. Supabase ulangach haqiqiy fayllar yuklanadi.", saved: "Saqlandi", submitted: "Maqola yuborildi", needLogin: "Avval tizimga kiring", sampleSite: "Bu sayt namunasi" , heroKicker: "Xalqaro taqrizlanadigan ochiq jurnal", langsLabel: "Nashr tillari", published: "Nashr etilgan maqolalar", howTitle: "Maqola qanday nashr etiladi",
+    steps: [["Yuborish", "Maqolani onlayn yuboring va har bir bosqichini shaxsiy kabinetda kuzating."], ["Taqriz", "Ikki mustaqil taqrizchi yopiq usulda baholaydi, odatda 3–4 hafta."], ["Qaror", "Muharrir qabul qilish, tuzatish yoki rad etish haqida xabar beradi."], ["Nashr", "Maqola DOI bilan ochiq kirishda chiqadi va arxivga qo'shiladi."]] },
+  ru: { reset: "Сбросить демо-данные", fileNote: "В демо-режиме файлы не хранятся. После подключения Supabase здесь будут настоящие файлы.", saved: "Сохранено", submitted: "Статья отправлена", needLogin: "Сначала войдите", sampleSite: "Образец сайта" , heroKicker: "Международный рецензируемый журнал открытого доступа", langsLabel: "Языки публикации", published: "Опубликовано статей", howTitle: "Как публикуется статья",
+    steps: [["Отправка", "Отправьте статью онлайн и следите за каждым этапом в личном кабинете."], ["Рецензирование", "Два независимых рецензента, двойное слепое рецензирование, обычно 3–4 недели."], ["Решение", "Редактор сообщает: принять, доработать или отклонить."], ["Публикация", "Статья выходит в открытом доступе с DOI и попадает в архив."]] },
+  en: { reset: "Reset demo data", fileNote: "Files aren't stored in demo mode. Real files will download here once Supabase is connected.", saved: "Saved", submitted: "Article submitted", needLogin: "Please log in first", sampleSite: "Sample site" , heroKicker: "An international, peer-reviewed, open-access journal", langsLabel: "Publication languages", published: "Published articles", howTitle: "How an article gets published",
+    steps: [["Submit", "Send your manuscript online and follow every stage in your account."], ["Peer review", "Two independent reviewers assess it double-blind, usually in 3–4 weeks."], ["Decision", "The editor tells you: accept, revise or reject."], ["Publish", "Your article goes live open access with a DOI and joins the archive."]] },
+};
+const clone = (x) => JSON.parse(JSON.stringify(x));
+let db, S;
+(function load() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (e) {}
+  db = saved?.db || clone(SEED);
+  S = { theme: saved?.theme || "dark", lang: saved?.lang || "uz", uid: saved?.uid || null, q: "", filter: null, next: null, userQ: "" };
+})();
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ db, lang: S.lang, uid: S.uid, theme: S.theme })); } catch (e) {}
+}
+
+/* -------------------------------------------------------------- helpers */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function t(key, vars = {}) {
+  let s = key.split(".").reduce((o, p) => (o == null ? o : o[p]), MESSAGES[S.lang]);
+  if (s == null) s = EXTRA[S.lang][key] ?? key;
+  for (const [a, b] of Object.entries(vars)) s = s.split("{" + a + "}").join(b);
+  return s;
+}
+const tr = (o) => (o ? o[S.lang] || o.uz || o.en || o.ru || "" : "");
+const trx = (o) => (o && o[S.lang]) || "";
+const by = (table, id) => db[table].find((r) => r.id === id);
+const me = () => (S.uid ? by("profiles", S.uid) : null);
+const isStaff = () => ["editor", "admin"].includes(me()?.role);
+const now = () => new Date().toISOString();
+const newId = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const journal = () => db.journals[0];
+function fmtDate(d) {
+  if (!d) return "";
+  if (S.lang === "uz") {
+    const m = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+    const x = new Date(d);
+    return `${x.getDate()}-${m[x.getMonth()]}, ${x.getFullYear()}`;
+  }
+  const tag = S.lang === "ru" ? "ru-RU" : "en-GB";
+  try { return new Intl.DateTimeFormat(tag, { year: "numeric", month: "long", day: "numeric" }).format(new Date(d)); } catch (e) { return d.slice(0, 10); }
+}
+const range = (a, b) => (!a ? "" : b && b !== a ? `${a}–${b}` : String(a));
+function issueLabel(i) {
+  const v = by("volumes", i.volume_id);
+  const parts = [];
+  if (v) parts.push(t("archives.volume", { n: v.number, year: v.year }));
+  parts.push(i.is_special ? `${t("archives.special")} ${i.number}` : t("archives.issue", { n: i.number }));
+  return parts.join(", ");
+}
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.opacity = "1";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => (el.style.opacity = "0"), 2600);
+}
+const go = (hash) => { if (location.hash === "#" + hash) render(); else location.hash = hash; };
+const badge = (s) => `<span class="badge b-${s}">${esc(t("status." + s))}</span>`;
+const back = (hash) => `<a href="#${hash}" class="text-sm text-brand-600 hover:underline">← ${esc(t("common.back"))}</a>`;
+function setStatus(sub, status, note) {
+  const from = sub.status;
+  if (status === "submitted" && from !== "submitted") sub.submitted_at = now();
+  sub.status = status;
+  if (note !== undefined) sub.decision_note = note || null;
+  sub.updated_at = now();
+  db.submission_events.push({ id: Date.now(), submission_id: sub.id, actor_id: S.uid, from_status: from, to_status: status, note: note || null, created_at: now() });
+  if (typeof notify === "function") {
+    if (status === "submitted" && S.uid === sub.submitter_id) notify(staffIds(), "new", sub, "admin-sub-" + sub.id);
+    else if (S.uid !== sub.submitter_id) notify(sub.submitter_id, "status", sub, "mysub-" + sub.id, status);
+  }
+}
+
+/* --------------------------------------------------------------- layout */
+// Eight-pointed Samarkand star (two squares), used as the logo mark.
+function starMark(size = 28, stroke = "#e8b13a") {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="${stroke}" stroke-width="1.6">
+    <rect x="9" y="9" width="22" height="22"/><rect x="9" y="9" width="22" height="22" transform="rotate(45 20 20)"/>
+    <circle cx="20" cy="20" r="4.2" stroke="#3cc8bb"/></svg>`;
+}
+// A generated tile-pattern cover for each issue, so the archive reads like a shelf.
+function issueCover(i, size = "md") {
+  const v = by("volumes", i.volume_id);
+  const hues = [["#0a1d5c", "#3cc8bb"], ["#123a63", "#e8b13a"], ["#0b2c4f", "#79dfd5"], ["#1b1f5e", "#e8b13a"]];
+  const [bg, fg] = i.is_special ? ["#2a1846", "#e8b13a"] : hues[(i.number + (v?.number || 0)) % hues.length];
+  const id = "p" + i.id.replace(/[^a-z0-9]/gi, "");
+  const big = size === "lg";
+  const topic = issueTopic(i);
+  return `<div class="tilt relative aspect-[3/4] w-full overflow-hidden rounded-xl ring-1 ring-white/10" style="background:${bg}">
+    ${topic ? `<p class="absolute left-4 right-4 top-4 z-10 text-xs leading-snug text-[#cdd5e8]">${esc(topic)}</p>` : ""}
+    <svg class="absolute inset-0 h-full w-full opacity-60" aria-hidden="true">
+      <defs><pattern id="${id}" width="44" height="44" patternUnits="userSpaceOnUse">
+        <g fill="none" stroke="${fg}" stroke-width="0.9" opacity="0.55">
+          <rect x="12" y="12" width="20" height="20"/><rect x="12" y="12" width="20" height="20" transform="rotate(45 22 22)"/>
+          <path d="M0 22h6M38 22h6M22 0v6M22 38v6"/></g></pattern></defs>
+      <rect width="100%" height="100%" fill="url(#${id})"/></svg>
+    <div class="absolute inset-0 bg-gradient-to-t from-[#050b22] via-[#050b22]/40 to-transparent"></div>
+    <div class="absolute inset-x-0 bottom-0 ${big ? "p-6" : "p-4"}">
+      <p class="font-serif ${big ? "text-5xl" : "text-3xl"} font-light leading-none" style="color:${fg}">${i.is_special ? "S" + i.number : i.number}</p>
+      <p class="mt-2 text-xs text-[#cdd5e8]">${esc(v ? t("archives.volume", { n: v.number, year: v.year }) : "")}</p>
+    </div>
+  </div>`;
+}
+function layout(content) {
+  const u = me();
+  const pages = db.pages.filter((p) => p.show_in_menu && p.is_published).sort((a, b) => a.sort_order - b.sort_order);
+  const langPill = (l) => `<button data-act="setLang" data-l="${l}" aria-pressed="${l === S.lang}" class="rounded-full px-2.5 py-1 text-xs font-semibold transition ${l === S.lang ? "bg-slate-900 text-ink" : "text-slate-600 hover:text-slate-900"}">${l.toUpperCase()}</button>`;
+  return `
+  <div class="flex min-h-screen flex-col">
+    <div class="flex flex-wrap items-center justify-center gap-x-3 border-b border-accent/20 bg-accent/10 px-4 py-1.5 text-center text-xs text-accent">
+      <span>${esc(t("demo.banner"))}</span><button data-act="reset" class="underline underline-offset-2">${esc(t("reset"))}</button>
+    </div>
+    <header class="sticky top-0 z-40 border-b border-white/5 bg-slate-50/70 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-7xl items-center gap-6 px-5 py-3">
+        <a href="#home" class="flex shrink-0 items-center gap-3">
+          ${logoMark(30)}
+          <span class="font-serif text-lg tracking-tight text-slate-900">${esc(tr(journal().title))}</span>
+        </a>
+        <nav class="hidden flex-1 items-center gap-5 whitespace-nowrap text-sm xl:flex" aria-label="Main">
+          <a href="#current" class="navlink">${esc(t("nav.current"))}</a>
+          <a href="#archives" class="navlink">${esc(t("nav.archives"))}</a>
+          <a href="#board" class="navlink">${esc(t("nav.board"))}</a>
+          <a href="#news" class="navlink">${esc(t("news"))}</a>
+          ${pages.slice(0, u ? 0 : 2).map((p) => `<a href="#page-${esc(p.slug)}" class="navlink">${esc(tr(p.title))}</a>`).join("")}
+          <a href="#search" class="navlink" aria-label="${esc(t("nav.search"))}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a>
+        </nav>
+        <div class="ml-auto flex items-center gap-3 whitespace-nowrap">
+          <div data-bell>${bell()}</div>
+          ${themeButton()}
+          <div class="flex rounded-full border border-slate-200 p-0.5" role="group" aria-label="Language">${["uz", "ru", "en"].map(langPill).join("")}</div>
+          ${u ? `
+            ${isStaff() ? `<a href="#admin" class="navlink hidden text-sm sm:inline">${esc(t("nav.admin"))}</a>` : ""}
+            <a href="#dashboard" class="navlink hidden text-sm sm:inline">${esc(t("nav.dashboard"))}</a>
+            <button data-act="logout" class="navlink p-1" aria-label="${esc(t("nav.logout"))}" title="${esc(t("nav.logout"))}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg></button>
+          ` : `<a href="#login" class="navlink text-sm">${esc(t("nav.login"))}</a>`}
+          <a href="#submit" class="btn-gold hidden sm:inline-flex">${esc(t("nav.submit"))}</a>
+        </div>
+      </div>
+      <nav class="flex gap-5 overflow-x-auto whitespace-nowrap border-t border-white/5 px-5 py-2 text-sm xl:hidden" aria-label="Main mobile">
+        <a href="#current" class="navlink shrink-0">${esc(t("nav.current"))}</a>
+        <a href="#archives" class="navlink shrink-0">${esc(t("nav.archives"))}</a>
+        <a href="#board" class="navlink shrink-0">${esc(t("nav.board"))}</a>
+        <a href="#news" class="navlink shrink-0">${esc(t("news"))}</a>
+        ${pages.map((p) => `<a href="#page-${esc(p.slug)}" class="navlink shrink-0">${esc(tr(p.title))}</a>`).join("")}
+        <a href="#search" class="navlink shrink-0">${esc(t("nav.search"))}</a>
+        <a href="#submit" class="shrink-0 font-semibold text-accent">${esc(t("nav.submit"))}</a>
+      </nav>
+    </header>
+    <main class="flex-1"><div id="page" class="${S.route === "home" ? "" : "mx-auto w-full max-w-7xl px-5 py-10"}">${content}</div></main>
+    <footer class="relative mt-24 border-t border-white/5 bg-slate-50/80 backdrop-blur">
+      <div class="mx-auto grid max-w-7xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
+        <div>
+          <div class="flex items-center gap-3">${logoMark(34)}<span class="font-serif text-xl text-slate-900">${esc(tr(journal().title))}</span></div>
+          <p class="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">${esc(tr(journal().description))}</p>
+        </div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#archives" class="navlink">${esc(t("nav.archives"))}</a></li>
+          <li><a href="#board" class="navlink">${esc(t("nav.board"))}</a></li>
+          <li><a href="#news" class="navlink">${esc(t("news"))}</a></li>
+          ${pages.map((p) => `<li><a href="#page-${esc(p.slug)}" class="navlink">${esc(tr(p.title))}</a></li>`).join("")}
+        </ul>
+        <div class="space-y-2 text-sm text-slate-500">
+          <p>ISSN ${esc(journal().issn_online)} (online)</p>
+          <p>${esc(journal().publisher)}</p>
+          <p>${esc(t("footer.license"))}</p>
+          <p>© 2026 ${esc(t("footer.rights"))}</p>
+        </div>
+      </div>
+    </footer>
+  </div>`;
+}
+
+/* ------------------------------------------------------------ home page */
+function viewHome() {
+  const j = journal();
+  const cur = publishedIssues()[0];
+  const steps = EXTRA[S.lang].steps;
+  const total = db.articles.filter((a) => a.status === "published").length;
+  return `
+  <section class="relative mx-auto flex min-h-[calc(100vh-7rem)] max-w-7xl items-center px-5 pb-16 pt-10">
+    <div class="max-w-2xl">
+      <h1 class="reveal font-serif text-[clamp(2.75rem,7vw,5.75rem)] font-light leading-[0.98] tracking-[-0.03em] text-slate-900" style="animation-delay:.35s">${esc(tr(j.title))}</h1>
+      <p class="reveal mt-7 max-w-xl text-lg leading-relaxed text-slate-600" style="animation-delay:.55s">${esc(tr(j.description))}</p>
+      <div class="reveal mt-9 flex flex-wrap gap-3" style="animation-delay:.7s">
+        <a href="#submit" class="btn-gold px-7 py-3 text-base">${esc(t("home.cta"))}</a>
+        ${cur ? `<a href="#issue-${cur.id}" class="btn-secondary px-7 py-3 text-base">${esc(t("nav.current"))}</a>` : ""}
+      </div>
+      <dl class="reveal mt-14 flex flex-wrap gap-x-10 gap-y-4 text-sm" style="animation-delay:.9s">
+        <div><dt class="text-slate-500">${esc(EXTRA[S.lang].langsLabel)}</dt><dd class="mt-1 text-slate-900">O'zbek, Русский, English</dd></div>
+        <div><dt class="text-slate-500">${esc(EXTRA[S.lang].published)}</dt><dd class="mt-1 text-slate-900">${total}</dd></div>
+        <div><dt class="text-slate-500">ISSN</dt><dd class="mt-1 text-slate-900">${esc(j.issn_online)}</dd></div>
+      </dl>
+    </div>
+    <a href="#home-current" data-act="scrollTo" data-target="home-current" class="absolute bottom-6 left-1/2 hidden -translate-x-1/2 text-slate-500 transition hover:text-slate-900 md:block" aria-label="${esc(t("home.currentIssue"))}">
+      <svg width="22" height="34" viewBox="0 0 22 34" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1" y="1" width="20" height="32" rx="10"/><path d="M11 8v6" class="animate-bounce"/></svg>
+    </a>
+  </section>
+
+  ${indexStrip()}
+  ${cur ? `<section id="home-current" class="mx-auto max-w-7xl scroll-mt-24 px-5 py-16">
+    <div class="grid gap-10 lg:grid-cols-[300px_1fr]">
+      <div class="lg:sticky lg:top-28 lg:self-start">
+        <a href="#issue-${cur.id}" class="block">${issueCover(cur, "lg")}</a>
+        <h2 class="mt-6 text-2xl">${esc(t("home.currentIssue"))}</h2>
+        <p class="mt-2 text-sm text-slate-500">${esc(issueLabel(cur))}<br>${esc(fmtDate(cur.published_at))}</p>
+        <a href="#issue-${cur.id}" class="mt-4 inline-block text-sm font-semibold text-brand-700 hover:underline">${esc(t("home.viewIssue"))}</a>
+      </div>
+      <div class="card p-2 sm:p-4">${articleList(issueArticles(cur.id))}</div>
+    </div>
+  </section>` : ""}
+
+  ${cfpCard()}
+  ${numbersBlock()}
+  <section class="mx-auto max-w-7xl px-5 py-16">
+    <h2 class="max-w-xl text-3xl leading-tight sm:text-4xl">${esc(EXTRA[S.lang].howTitle)}</h2>
+    <ol class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
+      ${steps.map(([h, p], i) => `<li class="step bg-slate-50/85 p-7 backdrop-blur" style="transition-delay:${i * 140}ms">
+        <span class="step-num font-serif text-4xl font-light text-accent">${i + 1}</span>
+        <h3 class="mt-6 text-lg">${esc(h)}</h3>
+        <p class="mt-2 text-sm leading-relaxed text-slate-500">${esc(p)}</p>
+      </li>`).join("")}
+    </ol>
+    <div class="mt-10 flex flex-wrap items-center gap-4">
+      <a href="#submit" class="btn-primary px-6 py-3">${esc(t("home.cta"))}</a>
+      <a href="#page-author-guidelines" class="text-sm font-semibold text-brand-700 hover:underline">${esc(t("nav.forAuthors"))}</a>
+    </div>
+  </section>
+  ${newsBlock()}`;
+}
+
+function viewArchives() {
+  const vols = db.volumes.slice().sort((a, b) => b.number - a.number)
+    .map((v) => ({ v, issues: db.issues.filter((i) => i.volume_id === v.id && i.status === "published").sort((a, b) => b.number - a.number || a.is_special - b.is_special) }))
+    .filter((x) => x.issues.length);
+  return `<div>
+    <h1 class="text-4xl sm:text-5xl font-light">${esc(t("archives.title"))}</h1>
+    ${!vols.length ? `<p class="mt-6 text-slate-500">${esc(t("archives.empty"))}</p>` : ""}
+    <div class="mt-12 space-y-14">${vols.map(({ v, issues }) => `
+      <section>
+        <h2 class="mb-6 border-b border-slate-200 pb-3 text-xl">${esc(t("archives.volume", { n: v.number, year: v.year }))}</h2>
+        <ul class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">${issues.map((i) => `
+          <li><a href="#issue-${i.id}" class="group block">
+            <div class="rounded-xl">${issueCover(i)}</div>
+            <p class="mt-3 text-sm font-semibold text-slate-900">${esc(i.is_special ? t("archives.special") + " " + i.number : t("archives.issue", { n: i.number }))}</p>
+            ${tr(i.title) ? `<p class="text-xs text-slate-500">${esc(tr(i.title))}</p>` : ""}
+            <p class="text-xs text-slate-500">${esc(fmtDate(i.published_at))}</p>
+          </a></li>`).join("")}
+        </ul>
+      </section>`).join("")}
+    </div>
+  </div>`;
+}
+
+/* ---------------------------------------------------------- public views */
+function articleList(list) {
+  if (!list.length) return `<p class="text-slate-500">${esc(t("issue.empty"))}</p>`;
+  return `<ul class="divide-y divide-slate-200">${list.map((a) => {
+    const sec = by("sections", a.section_id);
+    const r = range(a.first_page, a.last_page);
+    return `<li class="py-4">
+      ${sec ? `<p class="mb-1 text-xs font-medium text-accent">${esc(tr(sec.title))}</p>` : ""}
+      <a href="#article-${a.id}" class="text-lg font-semibold leading-snug text-slate-900 transition hover:text-brand-700">${esc(trx(a.title_i18n) || a.title)}</a>
+      <p class="mt-1 text-sm text-slate-600">${esc(a.authors.map((x) => x.name).join(", "))}</p>
+      <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        ${r ? `<span class="text-slate-500">${esc(t("issue.pages", { range: r }))}</span>` : ""}
+        ${a.doi ? `<span class="text-brand-600">DOI: ${esc(a.doi)}</span>` : ""}
+        ${a.pdf_path ? `<button data-act="pdf" data-id="${a.id}" class="rounded bg-brand-50 px-2 py-0.5 font-medium text-brand-700 hover:bg-brand-100">PDF</button>` : ""}
+      </div>
+    </li>`;
+  }).join("")}</ul>`;
+}
+const publishedIssues = () => db.issues.filter((i) => i.status === "published").sort((a, b) => (b.published_at || "").localeCompare(a.published_at || ""));
+const issueArticles = (id) => db.articles.filter((a) => a.issue_id === id && a.status === "published").sort((a, b) => a.sort_order - b.sort_order || (a.first_page || 0) - (b.first_page || 0));
+
+function viewIssue(id) {
+  const i = by("issues", id);
+  if (!i || (i.status !== "published" && !isStaff())) return notFound();
+  return `<div>
+    <nav class="mb-4 text-sm text-slate-500"><a href="#home" class="hover:underline">${esc(t("nav.home"))}</a> / <a href="#archives" class="hover:underline">${esc(t("nav.archives"))}</a> / ${esc(issueLabel(i))}</nav>
+    <div class="grid gap-8 md:grid-cols-[240px_1fr]">
+    <div class="md:sticky md:top-28 md:self-start">${issueCover(i, "lg")}</div>
+    <div class="card">
+      <h1 class="text-3xl">${esc(issueLabel(i))}</h1>
+      ${tr(i.title) ? `<p class="mt-1 text-lg text-slate-700">${esc(tr(i.title))}</p>` : ""}
+      ${i.published_at ? `<p class="mt-1 text-sm text-slate-500">${esc(t("issue.published", { date: fmtDate(i.published_at) }))}</p>` : ""}
+      <h2 class="mt-8 border-b border-slate-200 pb-2 text-xl">${esc(t("issue.articles"))}</h2>
+      ${articleList(issueArticles(id))}
+    </div></div>
+  </div>`;
+}
+
+function viewPage(slug) {
+  const p = db.pages.find((x) => x.slug === slug && (x.is_published || isStaff()));
+  if (!p) return notFound();
+  return `<article class="card mx-auto max-w-3xl"><h1 class="mb-6 text-3xl">${esc(tr(p.title))}</h1><div class="prose-content">${tr(p.body)}</div></article>`;
+}
+
+function viewSearch() {
+  const q = S.q.trim().toLowerCase();
+  const res = !q ? [] : db.articles.filter((a) => a.status === "published").filter((a) => {
+    const hay = [a.title, a.abstract, a.keywords.join(" "), a.authors.map((x) => x.name).join(" "), Object.values(a.title_i18n || {}).join(" ")].join(" ").toLowerCase();
+    return q.split(/\s+/).every((w) => hay.includes(w));
+  });
+  return `<div class="card">
+    <h1 class="mb-4 text-3xl">${esc(t("search.title"))}</h1>
+    <form data-form="search" class="flex gap-2">
+      <label for="q" class="sr-only">${esc(t("search.title"))}</label>
+      <input id="q" name="q" value="${esc(S.q)}" placeholder="${esc(t("search.placeholder"))}" class="input">
+      <button class="btn-primary">${esc(t("search.button"))}</button>
+    </form>
+    ${q ? `<div class="mt-6"><p class="mb-2 text-sm text-slate-500">${esc(res.length ? t("search.results", { count: res.length }) : t("search.empty"))}</p>${res.length ? articleList(res) : ""}</div>` : ""}
+  </div>`;
+}
+
+const notFound = () => `<div class="card mx-auto max-w-md text-center"><h1 class="text-4xl">404</h1><a href="#home" class="mt-4 inline-block text-brand-600 underline">${esc(t("nav.home"))}</a></div>`;
+
+/* ----------------------------------------------------------------- auth */
+function viewAuth(mode) {
+  const accounts = [["admin@demo.uz", "admin"], ["author@demo.uz", "author"], ["reviewer@demo.uz", "reviewer"]];
+  return `<div class="card mx-auto max-w-md">
+    <h1 class="mb-6 text-2xl">${esc(mode === "login" ? t("auth.loginTitle") : t("auth.registerTitle"))}</h1>
+    <form data-form="${mode}" class="space-y-4">
+      ${mode === "register" ? `
+        <div><label class="label" for="full_name">${esc(t("auth.fullName"))}</label><input class="input" id="full_name" name="full_name" required></div>
+        <div><label class="label" for="affiliation">${esc(t("auth.affiliation"))}</label><input class="input" id="affiliation" name="affiliation"></div>` : ""}
+      <div><label class="label" for="email">${esc(t("auth.email"))}</label><input class="input" id="email" name="email" type="email" required autocomplete="email"></div>
+      <div><label class="label" for="password">${esc(t("auth.password"))}</label><input class="input" id="password" name="password" type="password" required ${mode === "register" ? 'minlength="8"' : ""}>${mode === "register" ? `<p class="mt-1 text-xs text-slate-500">${esc(t("auth.passwordHint"))}</p>` : ""}</div>
+      <p id="autherr" class="hidden text-sm text-red-400"></p>
+      <button class="btn-primary w-full">${esc(mode === "login" ? t("auth.loginTitle") : t("auth.registerTitle"))}</button>
+    </form>
+    ${mode === "login" ? `<div class="mt-6 rounded-xl border border-accent/40 bg-accent/10 p-4">
+      <p class="mb-3 text-sm font-medium text-accent">${esc(t("demo.accounts"))}</p>
+      <div class="grid gap-2">${accounts.map(([email, role]) => `
+        <button data-act="demoLogin" data-email="${email}" class="btn-secondary w-full justify-between"><span>${esc(t("demo.as", { role: t("demo." + role) }))}</span><span class="text-xs text-slate-500">${email}</span></button>`).join("")}
+      </div></div>` : ""}
+    <p class="mt-6 text-center text-sm text-slate-600">${mode === "login"
+      ? `${esc(t("auth.noAccount"))} <a href="#register" class="text-brand-600 underline">${esc(t("auth.registerTitle"))}</a>`
+      : `${esc(t("auth.haveAccount"))} <a href="#login" class="text-brand-600 underline">${esc(t("auth.loginTitle"))}</a>`}</p>
+  </div>`;
+}
+function loginAs(uid) {
+  S.uid = uid; save();
+  const next = S.next; S.next = null;
+  go(next || (isStaff() ? "admin" : "dashboard"));
+}
+
+/* ------------------------------------------------------------ user panel */
+function fileList(files) {
+  if (!files.length) return `<p class="text-sm text-slate-500">${esc(t("common.none"))}</p>`;
+  return `<ul class="divide-y divide-slate-100 text-sm">${files.map((f) => `
+    <li class="flex items-center justify-between gap-3 py-2">
+      <span><span class="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs uppercase text-slate-600">${esc(f.kind)}</span>${esc(f.file_name)}<span class="ml-2 text-slate-500">v${f.version} · ${esc(fmtDate(f.created_at))}</span></span>
+      <button data-act="file" class="text-brand-600 hover:underline">${esc(t("common.download"))}</button>
+    </li>`).join("")}</ul>`;
+}
+function timeline(sid) {
+  const ev = db.submission_events.filter((e) => e.submission_id === sid).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  return `<ol class="space-y-3 border-l-2 border-slate-200 pl-4">${ev.map((e) => `
+    <li class="relative"><span class="absolute -left-[23px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-brand-600" aria-hidden="true"></span>
+      <div class="flex flex-wrap items-center gap-2">${badge(e.to_status)}<span class="text-xs text-slate-500">${esc(fmtDate(e.created_at))}</span></div>
+      ${e.note ? `<p class="mt-1 whitespace-pre-line text-sm text-slate-700">${esc(e.note)}</p>` : ""}
+    </li>`).join("")}</ol>`;
+}
+
+function viewDashboard() {
+  const u = me();
+  const subs = db.submissions.filter((s) => s.submitter_id === u.id).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const revs = db.review_assignments.filter((r) => r.reviewer_id === u.id && ["invited", "accepted", "completed"].includes(r.status));
+  return `<div class="space-y-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div><h1 class="text-3xl">${esc(t("dashboard.title"))}</h1><p class="text-slate-600">${esc(u.full_name)} · ${esc(u.email)}</p></div>
+      <a href="#submit" class="btn-primary">+ ${esc(t("dashboard.new"))}</a>
+    </div>
+    <section class="card">
+      <h2 class="mb-4 text-xl">${esc(t("dashboard.submissions"))}</h2>
+      ${!subs.length ? `<p class="text-slate-500">${esc(t("dashboard.noSubmissions"))}</p>` : `<div class="overflow-x-auto"><table class="tbl">
+        <thead><tr><th>${esc(t("common.title"))}</th><th>${esc(t("common.status"))}</th><th>${esc(t("dashboard.updated"))}</th></tr></thead>
+        <tbody>${subs.map((s) => `<tr><td><a href="#mysub-${s.id}" class="text-brand-700 hover:underline">${esc(s.title)}</a></td><td>${badge(s.status)}</td><td class="whitespace-nowrap text-slate-500">${esc(fmtDate(s.updated_at))}</td></tr>`).join("")}</tbody>
+      </table></div>`}
+    </section>
+    ${u.is_reviewer || revs.length ? `<section class="card">
+      <h2 class="mb-4 text-xl">${esc(t("dashboard.reviews"))}</h2>
+      ${!revs.length ? `<p class="text-slate-500">${esc(t("dashboard.noReviews"))}</p>` : `<div class="overflow-x-auto"><table class="tbl">
+        <thead><tr><th>${esc(t("common.title"))}</th><th>${esc(t("common.status"))}</th><th>${esc(t("admin.dueDate"))}</th></tr></thead>
+        <tbody>${revs.map((r) => `<tr><td><a href="#review-${r.id}" class="text-brand-700 hover:underline">${esc(by("submissions", r.submission_id)?.title)}</a></td><td>${esc(t("reviewStatus." + r.status))}</td><td class="whitespace-nowrap text-slate-500">${esc(fmtDate(r.due_at))}</td></tr>`).join("")}</tbody>
+      </table></div>`}
+    </section>` : ""}
+  </div>`;
+}
+
+function authorRow(a = {}, i = 0) {
+  return `<div class="author-row grid gap-2 rounded-md border border-slate-200 p-3 sm:grid-cols-2">
+    <input class="input" name="a_name" placeholder="${esc(t("submit.authorName"))}" aria-label="${esc(t("submit.authorName"))}" value="${esc(a.full_name)}" required>
+    <input class="input" name="a_email" type="email" placeholder="${esc(t("submit.authorEmail"))}" aria-label="${esc(t("submit.authorEmail"))}" value="${esc(a.email)}">
+    <input class="input" name="a_aff" placeholder="${esc(t("submit.authorAffiliation"))}" aria-label="${esc(t("submit.authorAffiliation"))}" value="${esc(a.affiliation)}">
+    <input class="input" name="a_orcid" placeholder="ORCID 0000-0000-0000-0000" aria-label="ORCID" value="${esc(a.orcid)}">
+    <div class="flex items-center justify-between sm:col-span-2">
+      <label class="flex items-center gap-2 text-sm"><input type="radio" name="corr" ${i === 0 ? "checked" : ""}> ${esc(t("submit.corresponding"))}</label>
+      <button type="button" data-act="removeAuthor" class="text-sm text-red-400 hover:underline">${esc(t("submit.remove"))}</button>
+    </div>
+  </div>`;
+}
+function viewMySub(id) {
+  const s = by("submissions", id);
+  if (!s || s.submitter_id !== S.uid) return notFound();
+  const authors = db.submission_authors.filter((a) => a.submission_id === id).sort((a, b) => a.sort_order - b.sort_order);
+  const files = db.submission_files.filter((f) => f.submission_id === id && f.kind !== "review_attachment");
+  const reviews = db.review_assignments.filter((r) => r.submission_id === id && r.status === "completed");
+  const canWithdraw = !["published", "rejected", "withdrawn"].includes(s.status);
+  return `<div class="grid gap-6 lg:grid-cols-[1fr_300px]">
+    <div class="space-y-6">
+      ${back("dashboard")}
+      <div class="card">
+        <div class="mb-2">${badge(s.status)}</div>
+        <h1 class="text-2xl">${esc(s.title)}</h1>
+        <p class="mt-2 text-sm text-slate-600">${esc(authors.map((a) => a.full_name).join(", "))}</p>
+        <p class="mt-4 whitespace-pre-line text-sm leading-relaxed">${esc(s.abstract)}</p>
+        ${s.keywords.length ? `<p class="mt-3 text-sm text-slate-500">${esc(t("article.keywords"))}: ${esc(s.keywords.join(", "))}</p>` : ""}
+      </div>
+      ${s.decision_note ? `<div class="card border-accent/40 bg-accent/10"><h2 class="mb-1 text-lg">${esc(t("submission.editorNote"))}</h2><p class="whitespace-pre-line text-sm">${esc(s.decision_note)}</p></div>` : ""}
+      ${s.status === "revision_required" ? `<form data-form="revision" data-id="${s.id}" class="card space-y-3 border-orange-400/40">
+        <h2 class="text-lg">${esc(t("submission.revision"))}</h2>
+        <p class="text-sm text-slate-600">${esc(t("submission.revisionHint"))}</p>
+        <label class="sr-only" for="revfile">${esc(t("submission.revision"))}</label>
+        <input id="revfile" class="input" type="file" name="file" required accept=".doc,.docx,.pdf">
+        <button class="btn-primary">${esc(t("submission.sendRevision"))}</button>
+      </form>` : ""}
+      <div class="card"><h2 class="mb-3 text-lg">${esc(t("submission.reviews"))}</h2>
+        ${!reviews.length ? `<p class="text-sm text-slate-500">${esc(t("submission.noReviews"))}</p>` : `<ul class="space-y-4">${reviews.map((r) => `
+          <li class="rounded-md border border-slate-200 p-3"><p class="text-sm font-medium">${esc(t("submission.round", { n: r.round }))} · ${esc(t("rec." + r.recommendation))}<span class="ml-2 font-normal text-slate-500">${esc(fmtDate(r.completed_at))}</span></p>
+          ${r.comments_to_author ? `<p class="mt-2 whitespace-pre-line text-sm">${esc(r.comments_to_author)}</p>` : ""}</li>`).join("")}</ul>`}
+      </div>
+      <div class="card"><h2 class="mb-3 text-lg">${esc(t("submission.files"))}</h2>${fileList(files)}</div>
+    </div>
+    <aside class="space-y-4">
+      <div class="card"><h2 class="mb-4 text-lg">${esc(t("submission.timeline"))}</h2>${timeline(id)}</div>
+      ${canWithdraw ? `<button data-act="withdraw" data-id="${s.id}" class="btn-secondary w-full text-red-400">${esc(t("submission.withdraw"))}</button>` : ""}
+    </aside>
+  </div>`;
+}
+
+function viewReview(id) {
+  const r = by("review_assignments", id);
+  if (!r || r.reviewer_id !== S.uid) return notFound();
+  const s = by("submissions", r.submission_id);
+  const files = db.submission_files.filter((f) => f.submission_id === s.id && ["manuscript", "revision"].includes(f.kind));
+  return `<div class="mx-auto max-w-3xl space-y-6">
+    ${back("dashboard")}
+    <div class="card">
+      <p class="text-sm text-slate-500">${esc(t("review.title"))} · ${esc(t("reviewStatus." + r.status))}${r.due_at ? " · " + esc(t("review.due", { date: fmtDate(r.due_at) })) : ""}</p>
+      <h1 class="mt-1 text-2xl">${esc(s.title)}</h1>
+      <p class="mt-4 whitespace-pre-line text-sm leading-relaxed">${esc(s.abstract)}</p>
+      <p class="mt-3 text-sm text-slate-500">${esc(t("article.keywords"))}: ${esc(s.keywords.join(", "))}</p>
+    </div>
+    ${!["invited", "declined"].includes(r.status) ? `<div class="card"><h2 class="mb-3 text-lg">${esc(t("submission.files"))}</h2>${fileList(files)}</div>` : ""}
+    ${r.status === "invited" ? `<div class="card flex gap-3"><button data-act="invite" data-id="${r.id}" data-ok="1" class="btn-primary">${esc(t("review.accept"))}</button><button data-act="invite" data-id="${r.id}" data-ok="0" class="btn-secondary">${esc(t("review.decline"))}</button></div>` : ""}
+    ${r.status === "accepted" ? `<form data-form="review" data-id="${r.id}" class="card space-y-4">
+      <div><label class="label" for="recommendation">${esc(t("review.recommendation"))}</label>
+        <select class="input" id="recommendation" name="recommendation" required><option value="" disabled selected>—</option>${["accept", "minor_revision", "major_revision", "reject"].map((x) => `<option value="${x}">${esc(t("rec." + x))}</option>`).join("")}</select></div>
+      <div><label class="label" for="cta">${esc(t("review.toAuthor"))}</label><textarea class="input min-h-40" id="cta" name="comments_to_author" required></textarea></div>
+      <div><label class="label" for="cte">${esc(t("review.toEditor"))}</label><textarea class="input min-h-24" id="cte" name="comments_to_editor"></textarea></div>
+      <button class="btn-primary">${esc(t("review.send"))}</button>
+    </form>` : ""}
+    ${r.status === "completed" ? `<div class="card border-brand-600/40 bg-brand-600/10"><p class="font-medium text-brand-700">${esc(t("review.thanks"))}</p><p class="mt-2 text-sm">${esc(t("review.recommendation"))}: ${esc(t("rec." + r.recommendation))}</p>${r.comments_to_author ? `<p class="mt-2 whitespace-pre-line text-sm">${esc(r.comments_to_author)}</p>` : ""}</div>` : ""}
+  </div>`;
+}
+
+/* ---------------------------------------------------------- admin panel */
+function adminShell(content, active) {
+  const items = [["admin", t("admin.dashboard")], ["admin-submissions", t("admin.submissions")], ["admin-issues", t("admin.issues")], ["admin-articles", t("admin.articles")], ["admin-pages", t("admin.pages")]];
+  items.push(["admin-board", t("nav.board")], ["admin-news", t("news")]);
+  if (me().role === "admin") items.push(["admin-users", t("admin.users")], ["admin-settings", t("settings")]);
+  return `<div class="flex flex-wrap gap-6">
+    <aside class="w-full md:w-48"><nav class="card space-y-1 p-3">${items.map(([h, l]) => `<a href="#${h}" class="block rounded px-3 py-2 text-sm ${h === active ? "bg-brand-50 font-medium text-brand-700" : "hover:bg-brand-50 hover:text-brand-700"}">${esc(l)}</a>`).join("")}</nav></aside>
+    <div class="min-w-0 flex-[999_1_560px]">${content}</div>
+  </div>`;
+}
+function viewAdmin() {
+  const c = (f) => db.submissions.filter(f).length;
+  const stats = [
+    [t("admin.statNew"), c((s) => ["submitted", "desk_review"].includes(s.status)), "submitted"],
+    [t("admin.statReview"), c((s) => ["under_review", "revision_required"].includes(s.status)), "under_review"],
+    [t("admin.statAccepted"), c((s) => s.status === "accepted"), "accepted"],
+    [t("admin.statArticles"), db.articles.filter((a) => a.status === "published").length, null],
+    [t("admin.statUsers"), db.profiles.length, null],
+  ];
+  return adminShell(`<h1 class="mb-6 text-3xl">${esc(t("admin.dashboard"))}</h1>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">${stats.map(([l, n, f], i) => `
+      <button data-act="statGo" data-f="${f || ""}" data-i="${i}" class="card text-left transition hover:-translate-y-0.5 hover:border-brand-600"><p class="text-sm text-slate-500">${esc(l)}</p><p class="mt-1 font-serif text-4xl text-brand-900">${n}</p></button>`).join("")}
+    </div>${adminCharts()}`, "admin");
+}
+const STATUSES = ["submitted", "desk_review", "under_review", "revision_required", "accepted", "rejected", "published", "withdrawn"];
+function viewAdminSubs() {
+  const list = db.submissions.filter((s) => s.status !== "draft" && (!S.filter || s.status === S.filter)).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const pill = (f, label) => `<button data-act="filter" data-f="${f || ""}" class="rounded-full px-3 py-1 ${S.filter === f ? "bg-brand-600 text-ink" : "bg-slate-100"}">${esc(label)}</button>`;
+  return adminShell(`<div class="card">
+    <h1 class="mb-4 text-2xl">${esc(t("admin.submissions"))}</h1>
+    <div class="mb-4 flex flex-wrap gap-2 text-sm">${pill(null, t("admin.filterAll"))}${STATUSES.map((s) => pill(s, t("status." + s))).join("")}</div>
+    <div class="overflow-x-auto"><table class="tbl">
+      <thead><tr><th>${esc(t("common.title"))}</th><th>${esc(t("admin.author"))}</th><th>${esc(t("common.status"))}</th><th>${esc(t("common.date"))}</th></tr></thead>
+      <tbody>${list.map((s) => { const p = by("profiles", s.submitter_id); return `<tr>
+        <td><a href="#admin-sub-${s.id}" class="text-brand-700 hover:underline">${esc(s.title)}</a></td>
+        <td class="text-slate-600">${esc(p?.full_name)}<br><span class="text-xs">${esc(p?.email)}</span></td>
+        <td>${badge(s.status)}</td><td class="whitespace-nowrap text-slate-500">${esc(fmtDate(s.submitted_at || s.updated_at))}</td></tr>`; }).join("") || `<tr><td colspan="4" class="text-slate-500">${esc(t("common.none"))}</td></tr>`}</tbody>
+    </table></div></div>`, "admin-submissions");
+}
+function viewAdminSub(id) {
+  const s = by("submissions", id);
+  if (!s) return adminShell(notFound(), "admin-submissions");
+  const p = by("profiles", s.submitter_id);
+  const sec = by("sections", s.section_id);
+  const authors = db.submission_authors.filter((a) => a.submission_id === id).sort((a, b) => a.sort_order - b.sort_order);
+  const files = db.submission_files.filter((f) => f.submission_id === id);
+  const revs = db.review_assignments.filter((r) => r.submission_id === id);
+  const reviewers = db.profiles.filter((x) => x.is_reviewer);
+  const maxRound = Math.max(1, ...revs.map((r) => r.round));
+  const article = db.articles.find((a) => a.submission_id === id);
+  const issues = db.issues.slice().sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  const closed = ["published", "rejected", "withdrawn"].includes(s.status);
+  return adminShell(`<div class="space-y-6">
+    ${back("admin-submissions")}
+    <div class="grid gap-6 xl:grid-cols-[1fr_300px]">
+      <div class="space-y-6">
+        <div class="card">
+          <div class="mb-2 flex flex-wrap items-center gap-3">${badge(s.status)}${sec ? `<span class="text-xs text-accent">${esc(tr(sec.title))}</span>` : ""}<span class="text-xs text-slate-500">${esc(t("langs." + s.language))}</span></div>
+          <h1 class="text-2xl">${esc(s.title)}</h1>
+          <p class="mt-2 text-sm text-slate-600">${esc(t("admin.author"))}: ${esc(p?.full_name)} (${esc(p?.email)})</p>
+          <ul class="mt-3 space-y-1 text-sm">${authors.map((a) => `<li><span class="font-medium">${esc(a.full_name)}</span>${a.is_corresponding ? " ✉" : ""}${a.affiliation ? `<span class="text-slate-500"> — ${esc(a.affiliation)}</span>` : ""}${a.email ? `<span class="text-slate-500"> · ${esc(a.email)}</span>` : ""}</li>`).join("")}</ul>
+          <h2 class="mt-5 text-lg">${esc(t("article.abstract"))}</h2>
+          <p class="mt-1 whitespace-pre-line text-sm leading-relaxed">${esc(s.abstract)}</p>
+          <p class="mt-3 text-sm text-slate-500">${esc(t("article.keywords"))}: ${esc(s.keywords.join(", "))}</p>
+          ${s.cover_letter ? `<h2 class="mt-5 text-lg">${esc(t("submit.coverLetter"))}</h2><p class="mt-1 whitespace-pre-line text-sm">${esc(s.cover_letter)}</p>` : ""}
+        </div>
+        <div class="card"><h2 class="mb-3 text-lg">${esc(t("submission.files"))}</h2>${fileList(files)}</div>
+        <div class="card">
+          <h2 class="mb-3 text-lg">${esc(t("dashboard.reviews"))}</h2>
+          ${revs.length ? `<ul class="space-y-3">${revs.map((r) => { const rv = by("profiles", r.reviewer_id); return `<li class="rounded-md border border-slate-200 p-3 text-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2"><span><span class="font-medium">${esc(rv?.full_name)}</span><span class="text-slate-500"> · ${esc(t("submission.round", { n: r.round }))} · ${esc(t("reviewStatus." + r.status))}${r.due_at ? " · " + esc(fmtDate(r.due_at)) : ""}</span></span>
+            ${["invited", "accepted"].includes(r.status) ? `<button data-act="cancelReview" data-id="${r.id}" class="text-xs text-red-400 hover:underline">${esc(t("common.cancel"))}</button>` : ""}</div>
+            ${r.recommendation ? `<p class="mt-2 font-medium">${esc(t("rec." + r.recommendation))}</p>` : ""}
+            ${r.comments_to_author ? `<p class="mt-1 whitespace-pre-line"><span class="text-slate-500">${esc(t("review.toAuthor"))}:</span> ${esc(r.comments_to_author)}</p>` : ""}
+            ${r.comments_to_editor ? `<p class="mt-1 whitespace-pre-line text-accent"><span class="text-slate-500">${esc(t("review.toEditor"))}:</span> ${esc(r.comments_to_editor)}</p>` : ""}
+          </li>`; }).join("")}</ul>` : `<p class="text-sm text-slate-500">${esc(t("submission.noReviews"))}</p>`}
+          ${!closed ? `<form data-form="assign" data-id="${s.id}" class="mt-4 grid gap-2 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_150px_80px_auto]">
+            <select name="reviewer_id" class="input" aria-label="${esc(t("admin.reviewer"))}">${reviewers.map((x) => `<option value="${x.id}">${esc(x.full_name || x.email)}</option>`).join("")}</select>
+            <input type="date" name="due_at" class="input" aria-label="${esc(t("admin.dueDate"))}">
+            <input type="number" name="round" min="1" value="${maxRound}" class="input" aria-label="Round">
+            <button class="btn-primary">${esc(t("admin.assign"))}</button>
+          </form>` : ""}
+        </div>
+      </div>
+      <aside class="space-y-6">
+        ${!["published", "withdrawn"].includes(s.status) ? `<form data-form="decision" data-id="${s.id}" class="card space-y-3">
+          <h2 class="text-lg">${esc(t("admin.changeStatus"))}</h2>
+          <label class="sr-only" for="dstatus">${esc(t("admin.changeStatus"))}</label>
+          <select id="dstatus" name="status" class="input">${["desk_review", "under_review", "revision_required", "accepted", "rejected"].map((d) => `<option value="${d}" ${d === s.status ? "selected" : ""}>${esc(t("status." + d))}</option>`).join("")}</select>
+          <label class="sr-only" for="dnote">${esc(t("admin.note"))}</label>
+          <textarea id="dnote" name="note" class="input min-h-24" placeholder="${esc(t("admin.note"))}">${esc(s.decision_note)}</textarea>
+          <button class="btn-primary w-full">${esc(t("admin.apply"))}</button>
+        </form>` : ""}
+        ${s.status === "accepted" && !article ? `<form data-form="publish" data-id="${s.id}" class="card space-y-3 border-brand-600/50">
+          <h2 class="text-lg">${esc(t("admin.publish"))}</h2>
+          <div><label class="label" for="pissue">${esc(t("admin.selectIssue"))}</label><select id="pissue" name="issue_id" class="input">${issues.map((i) => `<option value="${i.id}">${esc(issueLabel(i))}${i.status === "draft" ? " (draft)" : ""}</option>`).join("")}</select></div>
+          <div class="grid grid-cols-2 gap-2"><div><label class="label" for="pf">${esc(t("admin.firstPage"))}</label><input id="pf" name="first_page" type="number" min="1" class="input"></div><div><label class="label" for="pl">${esc(t("admin.lastPage"))}</label><input id="pl" name="last_page" type="number" min="1" class="input"></div></div>
+          <div><label class="label" for="pdoi">DOI</label><input id="pdoi" name="doi" class="input" placeholder="10.xxxx/xxxx"></div>
+          <div><label class="label" for="ppdf">${esc(t("admin.finalPdf"))}</label><input id="ppdf" name="pdf" type="file" accept="application/pdf" class="input"></div>
+          <button class="btn-primary w-full">${esc(t("admin.publish"))}</button>
+        </form>` : ""}
+        ${article ? `<a href="#admin-article-${article.id}" class="btn-secondary w-full">${esc(t("admin.articles"))} →</a>` : ""}
+        <div class="card"><h2 class="mb-4 text-lg">${esc(t("submission.timeline"))}</h2>${timeline(id)}</div>
+      </aside>
+    </div></div>`, "admin-submissions");
+}
+function viewAdminIssues() {
+  const vols = db.volumes.slice().sort((a, b) => b.number - a.number);
+  const nextVol = (vols[0]?.number || 0) + 1;
+  return adminShell(`<div class="space-y-6">
+    <h1 class="text-2xl">${esc(t("admin.issues"))}</h1>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <form data-form="volume" class="card space-y-3">
+        <h2 class="text-lg">${esc(t("admin.newVolume"))}</h2>
+        <div class="grid grid-cols-2 gap-2">
+          <label><span class="label">${esc(t("admin.number"))}</span><input name="number" type="number" value="${nextVol}" class="input" required></label>
+          <label><span class="label">${esc(t("admin.year"))}</span><input name="year" type="number" value="${new Date().getFullYear()}" class="input" required></label>
+        </div>
+        <button class="btn-primary">${esc(t("common.create"))}</button>
+      </form>
+      <form data-form="issue" class="card space-y-3">
+        <h2 class="text-lg">${esc(t("admin.newIssue"))}</h2>
+        <div class="grid grid-cols-2 gap-2">
+          <label><span class="label">${esc(t("admin.volume"))}</span><select name="volume_id" class="input">${vols.map((v) => `<option value="${v.id}">${esc(t("archives.volume", { n: v.number, year: v.year }))}</option>`).join("")}</select></label>
+          <label><span class="label">${esc(t("admin.number"))}</span><input name="number" type="number" min="1" value="1" class="input" required></label>
+        </div>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_special"> ${esc(t("admin.special"))}</label>
+        ${i18nFields("title", t("common.title"), {})}
+        <button class="btn-primary">${esc(t("common.create"))}</button>
+      </form>
+    </div>
+    ${vols.map((v) => { const list = db.issues.filter((i) => i.volume_id === v.id).sort((a, b) => b.number - a.number); return `<div class="card">
+      <h2 class="mb-3 text-xl">${esc(t("archives.volume", { n: v.number, year: v.year }))}</h2>
+      ${list.length ? `<div class="overflow-x-auto"><table class="tbl"><tbody>${list.map((i) => `<tr>
+        <td class="font-medium">${esc(i.is_special ? t("archives.special") + " " + i.number : t("archives.issue", { n: i.number }))}${tr(i.title) ? `<span class="block text-xs font-normal text-slate-500">${esc(tr(i.title))}</span>` : ""}</td>
+        <td><button data-act="issueArticles" data-id="${i.id}" class="text-brand-600 hover:underline">${db.articles.filter((a) => a.issue_id === i.id).length} ${esc(t("admin.articles").toLowerCase())}</button></td>
+        <td><span class="${i.status === "published" ? "text-brand-700" : "text-slate-500"}">${esc(i.status === "published" ? t("admin.isPublished") : "Draft")}</span>${i.published_at ? `<span class="block text-xs text-slate-500">${esc(fmtDate(i.published_at))}</span>` : ""}</td>
+        <td class="text-right"><button data-act="toggleIssue" data-id="${i.id}" class="${i.status === "published" ? "btn-secondary" : "btn-primary"}">${esc(i.status === "published" ? t("admin.unpublishIssue") : t("admin.publishIssue"))}</button></td>
+      </tr>`).join("")}</tbody></table></div>` : `<p class="text-sm text-slate-500">${esc(t("common.none"))}</p>`}
+    </div>`; }).join("")}
+  </div>`, "admin-issues");
+}
+function i18nFields(name, label, value, multiline) {
+  const L = [["uz", "O'zbekcha"], ["ru", "Русский"], ["en", "English"]];
+  return `<fieldset class="rounded-md border border-slate-200 p-3"><legend class="px-1 text-sm font-medium text-slate-700">${esc(label)}</legend>
+    <div class="${multiline ? "space-y-3" : "grid gap-2 sm:grid-cols-3"}">${L.map(([c, n]) => `<label class="block"><span class="mb-1 block text-xs uppercase text-slate-500">${n}</span>
+      ${multiline ? `<textarea name="${name}_${c}" class="input min-h-32 font-mono text-xs">${esc(value?.[c])}</textarea>` : `<input name="${name}_${c}" value="${esc(value?.[c])}" class="input">`}</label>`).join("")}</div></fieldset>`;
+}
+const i18nFrom = (fd, name) => ({ uz: (fd.get(name + "_uz") || "").trim(), ru: (fd.get(name + "_ru") || "").trim(), en: (fd.get(name + "_en") || "").trim() });
+function viewAdminArticles() {
+  const list = db.articles.filter((a) => !S.issueFilter || a.issue_id === S.issueFilter).sort((a, b) => (b.published_at || "9").localeCompare(a.published_at || "9"));
+  return adminShell(`<div class="card">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2"><h1 class="text-2xl">${esc(t("admin.articles"))}</h1>
+    ${S.issueFilter ? `<button data-act="issueArticles" data-id="" class="text-sm text-brand-600 hover:underline">${esc(issueLabel(by("issues", S.issueFilter)))} ✕</button>` : ""}</div>
+    <div class="overflow-x-auto"><table class="tbl"><tbody>${list.map((a) => `<tr>
+      <td><a href="#admin-article-${a.id}" class="text-brand-700 hover:underline">${esc(a.title)}</a><span class="block text-xs text-slate-500">${esc(a.authors.map((x) => x.name).join(", "))}</span></td>
+      <td class="whitespace-nowrap">${esc(t("admin.articleStatus_" + a.status))}</td>
+      <td class="whitespace-nowrap text-slate-500">${esc(fmtDate(a.published_at))}</td>
+      <td class="whitespace-nowrap text-xs text-slate-500">${esc(t("article.views"))}: ${a.views} · ${esc(t("article.downloads"))}: ${a.downloads}</td>
+    </tr>`).join("") || `<tr><td class="text-slate-500">${esc(t("common.none"))}</td></tr>`}</tbody></table></div></div>`, "admin-articles");
+}
+function viewAdminArticle(id) {
+  const a = by("articles", id);
+  if (!a) return adminShell(notFound(), "admin-articles");
+  return adminShell(`<div class="space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">${back("admin-articles")}${a.status === "published" ? `<a href="#article-${a.id}" class="text-sm text-brand-600 hover:underline">${esc(t("common.view"))} ↗</a>` : ""}</div>
+    <form data-form="article" data-id="${a.id}" class="card space-y-4">
+      <label class="block"><span class="label">${esc(t("common.title"))}</span><input name="title" value="${esc(a.title)}" class="input" required></label>
+      ${i18nFields("title", t("admin.titleTranslations"), a.title_i18n)}
+      <label class="block"><span class="label">${esc(t("article.abstract"))}</span><textarea name="abstract" class="input min-h-32">${esc(a.abstract)}</textarea></label>
+      ${i18nFields("abstract", t("admin.abstractTranslations"), a.abstract_i18n, true)}
+      <label class="block"><span class="label">${esc(t("article.keywords"))}</span><input name="keywords" value="${esc(a.keywords.join(", "))}" class="input"></label>
+      <div class="grid gap-3 sm:grid-cols-4">
+        <label class="sm:col-span-2"><span class="label">${esc(t("admin.selectIssue"))}</span><select name="issue_id" class="input">${db.issues.map((i) => `<option value="${i.id}" ${i.id === a.issue_id ? "selected" : ""}>${esc(issueLabel(i))}</option>`).join("")}</select></label>
+        <label><span class="label">${esc(t("admin.firstPage"))}</span><input name="first_page" type="number" value="${a.first_page ?? ""}" class="input"></label>
+        <label><span class="label">${esc(t("admin.lastPage"))}</span><input name="last_page" type="number" value="${a.last_page ?? ""}" class="input"></label>
+      </div>
+      <label class="block"><span class="label">DOI</span><input name="doi" value="${esc(a.doi)}" class="input"></label>
+      <label class="block"><span class="label">${esc(t("article.references"))}</span><textarea name="references" class="input min-h-28">${esc(a.references)}</textarea></label>
+      <button class="btn-primary">${esc(t("common.save"))}</button>
+    </form></div>`, "admin-articles");
+}
+function viewAdminUsers() {
+  if (me().role !== "admin") return adminShell(notFound(), "admin");
+  const q = S.userQ.toLowerCase();
+  const list = db.profiles.filter((u) => !q || (u.full_name + " " + u.email).toLowerCase().includes(q));
+  return adminShell(`<div class="card">
+    <h1 class="mb-4 text-2xl">${esc(t("admin.users"))}</h1>
+    <form data-form="userSearch" class="mb-4 flex gap-2"><label class="sr-only" for="uq">${esc(t("admin.searchUsers"))}</label><input id="uq" name="q" value="${esc(S.userQ)}" placeholder="${esc(t("admin.searchUsers"))}" class="input max-w-sm"><button class="btn-secondary">${esc(t("search.button"))}</button></form>
+    <div class="overflow-x-auto"><table class="tbl"><tbody>${list.map((u) => `<tr>
+      <td><span class="font-medium">${esc(u.full_name || "—")}</span><span class="block text-xs text-slate-500">${esc(u.email)}${u.affiliation ? " · " + esc(u.affiliation) : ""}</span></td>
+      <td><form data-form="role" data-id="${u.id}" class="flex flex-wrap items-center gap-3">
+        <label class="sr-only" for="role-${u.id}">${esc(t("admin.role"))}</label>
+        <select id="role-${u.id}" name="role" class="input w-40" ${u.id === S.uid ? "disabled" : ""}>${["user", "editor", "admin"].map((r) => `<option value="${r}" ${r === u.role ? "selected" : ""}>${esc(t("admin.roles_" + r))}</option>`).join("")}</select>
+        <label class="flex items-center gap-1 text-sm"><input type="checkbox" name="is_reviewer" ${u.is_reviewer ? "checked" : ""}> ${esc(t("admin.isReviewer"))}</label>
+        <button class="btn-secondary py-1">${esc(t("common.save"))}</button>
+      </form></td></tr>`).join("")}</tbody></table></div></div>`, "admin-users");
+}
+function viewAdminPages() {
+  return adminShell(`<div class="card">
+    <div class="mb-4 flex items-center justify-between"><h1 class="text-2xl">${esc(t("admin.pages"))}</h1><a href="#admin-page-new" class="btn-primary">+ ${esc(t("admin.newPage"))}</a></div>
+    <table class="tbl"><tbody>${db.pages.slice().sort((a, b) => a.sort_order - b.sort_order).map((p) => `<tr>
+      <td><a href="#admin-page-${p.id}" class="text-brand-700 hover:underline">${esc(tr(p.title))}</a></td><td class="text-slate-500">/${esc(p.slug)}</td>
+      <td class="text-xs text-slate-500">${esc(p.is_published ? t("admin.isPublished") : "Draft")}${p.show_in_menu ? " · " + esc(t("admin.showInMenu")) : ""}</td></tr>`).join("")}</tbody></table></div>`, "admin-pages");
+}
+function viewAdminPage(id) {
+  const p = id === "new" ? null : by("pages", id);
+  if (id !== "new" && !p) return adminShell(notFound(), "admin-pages");
+  return adminShell(`<div class="space-y-4">${back("admin-pages")}
+    <form data-form="page" data-id="${p?.id || ""}" class="card space-y-4">
+      <div class="grid gap-3 sm:grid-cols-3">
+        <label><span class="label">${esc(t("admin.slug"))}</span><input name="slug" value="${esc(p?.slug)}" class="input" required></label>
+        <label><span class="label">Sort</span><input name="sort_order" type="number" value="${p?.sort_order ?? 0}" class="input"></label>
+        <div class="flex items-end gap-4 pb-2 text-sm">
+          <label class="flex items-center gap-1"><input type="checkbox" name="is_published" ${p ? (p.is_published ? "checked" : "") : "checked"}> ${esc(t("admin.isPublished"))}</label>
+          <label class="flex items-center gap-1"><input type="checkbox" name="show_in_menu" ${p?.show_in_menu ? "checked" : ""}> ${esc(t("admin.showInMenu"))}</label>
+        </div>
+      </div>
+      ${i18nFields("title", t("common.title"), p?.title)}
+      ${i18nFields("body", t("admin.body"), p?.body, true)}
+      <button class="btn-primary">${esc(t("common.save"))}</button>
+    </form></div>`, "admin-pages");
+}
+
+/* ---------------------------------------------------------- batch 2 additions */
+Object.assign(EXTRA.uz, {
+  onPage: "Ushbu sahifada", pdfPreview: "PDF ko'rinishi", openPdf: "To'liq PDF ni ochish", copy: "Nusxalash", copied: "Nusxa olindi",
+  themeLight: "Yorug' rejim", themeDark: "Tungi rejim", settings: "Sozlamalar", logo: "Logotip", removeLogo: "Logotipni olib tashlash",
+  contactEmail: "Aloqa uchun email", photo: "Rasm", group: "Guruh", addMember: "A'zo qo'shish", deleted: "O'chirildi",
+  g_chief: "Bosh muharrir", g_deputy: "Muharrir o'rinbosarlari", g_member: "Tahrir hay'ati a'zolari", logoHint: "PNG, JPG yoki SVG, 300 KB gacha",
+});
+Object.assign(EXTRA.ru, {
+  onPage: "На этой странице", pdfPreview: "Предпросмотр PDF", openPdf: "Открыть полный PDF", copy: "Копировать", copied: "Скопировано",
+  themeLight: "Светлая тема", themeDark: "Тёмная тема", settings: "Настройки", logo: "Логотип", removeLogo: "Убрать логотип",
+  contactEmail: "Email для связи", photo: "Фото", group: "Группа", addMember: "Добавить члена", deleted: "Удалено",
+  g_chief: "Главный редактор", g_deputy: "Заместители главного редактора", g_member: "Члены редколлегии", logoHint: "PNG, JPG или SVG, до 300 КБ",
+});
+Object.assign(EXTRA.en, {
+  onPage: "On this page", pdfPreview: "PDF preview", openPdf: "Open full PDF", copy: "Copy", copied: "Copied",
+  themeLight: "Light mode", themeDark: "Dark mode", settings: "Settings", logo: "Logo", removeLogo: "Remove logo",
+  contactEmail: "Contact email", photo: "Photo", group: "Group", addMember: "Add member", deleted: "Deleted",
+  g_chief: "Editor-in-chief", g_deputy: "Deputy editors", g_member: "Board members", logoHint: "PNG, JPG or SVG, up to 300 KB",
+});
+
+// Extra fictional board members so the grouped layout has something to show.
+(function patchSeed() {
+  const B = SEED.editorial_board;
+  if (B.length <= 3) {
+    B.forEach((m) => (m.position_type = m.sort_order === 1 ? "chief" : m.sort_order === 2 ? "deputy" : "member"));
+    const add = (id, n, pos, aff, type, sort) => B.push({ id, journal_id: "journal-1", full_name: n, position: pos, affiliation: aff, position_type: type, sort_order: sort, photo_url: null, email: null, orcid: null });
+    add("eb-4", { uz: "Rahmonov Otabek", ru: "Рахмонов Отабек", en: "Otabek Rakhmonov" }, { uz: "Bosh muharrir o'rinbosari", ru: "Заместитель главного редактора", en: "Deputy Editor" }, { uz: "DSc, professor, Toshkent", ru: "DSc, профессор, Ташкент", en: "DSc, Professor, Tashkent" }, "deputy", 2);
+    add("eb-5", { uz: "Kim Yuna", ru: "Ким Юна", en: "Yuna Kim" }, { uz: "Tahrir hay'ati a'zosi", ru: "Член редколлегии", en: "Editorial Board Member" }, { uz: "PhD, Seul, Koreya", ru: "PhD, Сеул, Корея", en: "PhD, Seoul, Korea" }, "member", 4);
+    add("eb-6", { uz: "Nazarova Feruza", ru: "Назарова Феруза", en: "Feruza Nazarova" }, { uz: "Tahrir hay'ati a'zosi", ru: "Член редколлегии", en: "Editorial Board Member" }, { uz: "PhD, dotsent, Buxoro", ru: "PhD, доцент, Бухара", en: "PhD, Associate Professor, Bukhara" }, "member", 5);
+    add("eb-7", { uz: "Ahmet Yılmaz", ru: "Ахмет Йылмаз", en: "Ahmet Yılmaz" }, { uz: "Tahrir hay'ati a'zosi", ru: "Член редколлегии", en: "Editorial Board Member" }, { uz: "PhD, Anqara, Turkiya", ru: "PhD, Анкара, Турция", en: "PhD, Ankara, Türkiye" }, "member", 6);
+  }
+  if (!db.editorial_board.some((m) => m.position_type)) db.editorial_board = clone(SEED.editorial_board);
+})();
+
+const logoMark = (size = 30) => journal().logo
+  ? `<img src="${journal().logo}" alt="" width="${size}" height="${size}" class="rounded object-contain" style="width:${size}px;height:${size}px">`
+  : starMark(size);
+
+function themeButton() {
+  const light = S.theme === "light";
+  return `<button data-act="toggleTheme" class="navlink rounded-full p-1.5" aria-label="${esc(light ? t("themeDark") : t("themeLight"))}" title="${esc(light ? t("themeDark") : t("themeLight"))}">
+    ${light
+      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`
+      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`}
+  </button>`;
+}
+function applyTheme() {
+  document.documentElement.classList.toggle("light", S.theme === "light");
+}
+
+/* ---------- issue "main topic": most frequent keyword in the issue */
+function issueTopic(i) {
+  const count = {};
+  db.articles.filter((a) => a.issue_id === i.id).forEach((a) => a.keywords.forEach((k) => (count[k] = (count[k] || 0) + 1)));
+  return Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+}
+
+/* ---------- citations */
+function citation(a, fmt) {
+  const iss = a.issue_id ? by("issues", a.issue_id) : null, v = iss ? by("volumes", iss.volume_id) : null;
+  const year = a.published_at ? new Date(a.published_at).getFullYear() : "";
+  const r = range(a.first_page, a.last_page), jt = tr(journal().title), names = a.authors.map((x) => x.name);
+  const doi = a.doi ? `https://doi.org/${a.doi}` : "";
+  if (fmt === "gost") return `${names.join(", ")}. ${a.title} // ${jt}. – ${year}.${v ? ` – Т. ${v.number}` : ""}${iss ? `, № ${iss.number}` : ""}.${r ? ` – С. ${r}` : ""}.${a.doi ? ` – DOI: ${a.doi}` : ""}`;
+  if (fmt === "mla") return `${names.join(", ")}. "${a.title}." ${jt}${v ? `, vol. ${v.number}` : ""}${iss ? `, no. ${iss.number}` : ""}, ${year}${r ? `, pp. ${r}` : ""}.${doi ? ` ${doi}.` : ""}`;
+  return `${names.join(", ")} (${year}). ${a.title}. ${jt}${v && iss ? `, ${v.number}(${iss.number})` : ""}${r ? `, ${r}` : ""}.${doi ? ` ${doi}` : ""}`;
+}
+
+/* ---------- article page */
+function viewArticle(id) {
+  const a = by("articles", id);
+  if (!a || (a.status !== "published" && !isStaff())) return notFound();
+  if (!viewArticle.seen?.[id]) { viewArticle.seen = { ...(viewArticle.seen || {}), [id]: 1 }; a.views++; save(); }
+  const sec = by("sections", a.section_id);
+  const iss = a.issue_id ? by("issues", a.issue_id) : null;
+  const lt = trx(a.title_i18n), la = trx(a.abstract_i18n);
+  const r = range(a.first_page, a.last_page);
+  const fmt = S.citeFmt || "apa";
+  const toc = [["art-abstract", t("article.abstract")], a.keywords.length && ["art-keywords", t("article.keywords")], a.references && ["art-refs", t("article.references")], ["art-cite", t("article.cite")], a.pdf_path && ["art-preview", t("pdfPreview")]].filter(Boolean);
+  const h2 = (id, text) => `<h2 id="${id}" class="mt-10 scroll-mt-28 text-xl">${esc(text)}</h2>`;
+  return `<div id="readbar" class="read-progress" aria-hidden="true"></div>
+  <div class="grid gap-8 lg:grid-cols-[1fr_290px]">
+    <article id="article-body" class="card p-6 sm:p-10">
+      <nav class="mb-6 text-sm text-slate-500"><a href="#archives" class="hover:text-slate-900">${esc(t("nav.archives"))}</a>${iss ? ` / <a href="#issue-${iss.id}" class="hover:text-slate-900">${esc(issueLabel(iss))}</a>` : ""}</nav>
+      ${sec ? `<p class="mb-3 text-sm font-medium text-accent">${esc(tr(sec.title))}</p>` : ""}
+      <h1 class="text-3xl leading-tight sm:text-4xl">${esc(a.title)}</h1>
+      ${lt && lt !== a.title ? `<p class="mt-3 text-xl text-slate-600">${esc(lt)}</p>` : ""}
+      <ul class="mt-7 grid gap-4 sm:grid-cols-2">${a.authors.map((au) => `<li class="flex gap-3 text-sm">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 font-serif text-brand-700" aria-hidden="true">${esc(au.name.charAt(0))}</span>
+        <span><span class="font-semibold text-slate-900">${esc(au.name)}</span>${au.orcid ? `<span class="ml-2 text-xs text-brand-700">ORCID</span>` : ""}${au.affiliation ? `<span class="block text-slate-500">${esc(au.affiliation)}</span>` : ""}</span></li>`).join("")}</ul>
+      ${h2("art-abstract", t("article.abstract"))}
+      <p class="mt-3 max-w-[70ch] whitespace-pre-line text-[1.05rem] leading-[1.8]">${esc(a.abstract)}</p>
+      ${la && la !== a.abstract ? `<h3 class="mt-6 text-base text-slate-600">${esc(t("article.abstract"))} (${esc(t("article.translated"))})</h3><p class="mt-2 max-w-[70ch] whitespace-pre-line leading-[1.8] text-slate-700">${esc(la)}</p>` : ""}
+      ${a.keywords.length ? `${h2("art-keywords", t("article.keywords"))}<div class="mt-3 flex flex-wrap gap-2">${a.keywords.map((k) => `<button data-act="searchKw" data-q="${esc(k)}" class="rounded-full border border-slate-200 px-3 py-1 text-sm transition hover:border-brand-600 hover:text-brand-700">${esc(k)}</button>`).join("")}</div>` : ""}
+      ${a.references ? `${h2("art-refs", t("article.references"))}<ol class="mt-3 space-y-1.5 text-sm text-slate-700">${a.references.split("\n").filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : ""}
+      ${h2("art-cite", t("article.cite"))}
+      <div class="mt-3 inline-flex rounded-full border border-slate-200 p-0.5" role="group">${["apa", "gost", "mla"].map((f) => `<button data-act="citeFmt" data-f="${f}" aria-pressed="${f === fmt}" class="rounded-full px-4 py-1.5 text-xs font-semibold transition ${f === fmt ? "bg-brand-600 text-ink" : "text-slate-600 hover:text-slate-900"}">${f.toUpperCase()}</button>`).join("")}</div>
+      <p class="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm leading-relaxed">${esc(citation(a, fmt))}</p>
+      <button data-act="copy" data-text="${esc(citation(a, fmt))}" class="btn-secondary mt-3">${esc(t("copy"))}</button>
+      ${a.pdf_path ? `${h2("art-preview", t("pdfPreview"))}
+      <div class="mt-4 overflow-hidden rounded-xl ring-1 ring-slate-200">
+        <div class="paper relative mx-auto max-w-[640px] px-10 py-12 font-serif shadow-2xl" style="font-family:Georgia,serif">
+          <div class="flex items-center justify-between border-b border-[#1c2238]/20 pb-3 text-[11px] text-[#55607a]"><span>${esc(tr(journal().title))}</span><span>${iss ? esc(issueLabel(iss)) : ""}${r ? ` · ${esc(r)}` : ""}</span></div>
+          <h3 class="mt-8 text-center text-xl leading-snug" style="color:#1c2238;font-family:Georgia,serif">${esc(a.title)}</h3>
+          <p class="mt-3 text-center text-sm">${esc(a.authors.map((x) => x.name).join(", "))}</p>
+          <p class="mt-1 text-center text-[11px] italic text-[#55607a]">${esc(a.authors.map((x) => x.affiliation).filter(Boolean).join("; "))}</p>
+          <p class="mt-6 text-[12px] leading-relaxed"><b>${esc(t("article.abstract"))}.</b> ${esc(a.abstract)}</p>
+          <p class="mt-2 text-[12px]"><b>${esc(t("article.keywords"))}:</b> ${esc(a.keywords.join(", "))}</p>
+          <div class="mt-6 space-y-2" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => `<div class="h-2 rounded bg-[#1c2238]/10" style="width:${[100, 96, 99, 92, 100, 88, 97, 94, 60][i]}%"></div>`).join("")}</div>
+          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#fffdf7] to-transparent"></div>
+        </div>
+      </div>
+      <button data-act="pdf" data-id="${a.id}" class="btn-primary mt-4">${esc(t("openPdf"))}</button>` : ""}
+    </article>
+    <aside class="space-y-4 lg:sticky lg:top-24 lg:self-start">
+      ${a.pdf_path ? `<button data-act="pdf" data-id="${a.id}" class="btn-gold w-full py-3">${esc(t("article.pdf"))}</button>` : ""}
+      <nav class="card p-5 text-sm" aria-label="${esc(t("onPage"))}">
+        <p class="mb-3 font-semibold text-slate-900">${esc(t("onPage"))}</p>
+        <ul class="space-y-2 border-l border-slate-200">${toc.map(([id, l]) => `<li><button data-act="scrollTo" data-target="${id}" class="-ml-px border-l border-transparent pl-3 text-left text-slate-600 transition hover:border-brand-600 hover:text-slate-900">${esc(l)}</button></li>`).join("")}</ul>
+      </nav>
+      <dl class="card space-y-3 p-5 text-sm">
+        ${a.published_at ? `<div><dt class="text-slate-500">${esc(t("article.published"))}</dt><dd>${esc(fmtDate(a.published_at))}</dd></div>` : ""}
+        ${iss ? `<div><dt class="text-slate-500">${esc(t("article.issue"))}</dt><dd>${esc(issueLabel(iss))}</dd></div>` : ""}
+        ${r ? `<div><dt class="text-slate-500">${esc(t("article.pages"))}</dt><dd>${esc(r)}</dd></div>` : ""}
+        ${a.doi ? `<div><dt class="text-slate-500">DOI</dt><dd class="break-all text-brand-700">${esc(a.doi)}</dd></div>` : ""}
+        <div><dt class="text-slate-500">${esc(t("article.license"))}</dt><dd>${esc(a.license)}</dd></div>
+        <div class="flex gap-6"><div><dt class="text-slate-500">${esc(t("article.views"))}</dt><dd>${a.views}</dd></div><div><dt class="text-slate-500">${esc(t("article.downloads"))}</dt><dd>${a.downloads}</dd></div></div>
+      </dl>
+    </aside>
+  </div>`;
+}
+function updateReadBar() {
+  const bar = document.getElementById("readbar"), body = document.getElementById("article-body");
+  if (!bar || !body) return;
+  const r = body.getBoundingClientRect(), total = r.height - innerHeight * 0.6;
+  bar.style.transform = `scaleX(${Math.max(0, Math.min(1, -r.top / Math.max(total, 1)))})`;
+}
+window.addEventListener("scroll", updateReadBar, { passive: true });
+
+/* ---------- editorial board, grouped by role */
+function avatar(m, size) {
+  const name = tr(m.full_name);
+  return m.photo_url
+    ? `<img src="${m.photo_url}" alt="" class="rounded-full object-cover ring-2 ring-accent/60" style="width:${size}px;height:${size}px">`
+    : `<span class="relative flex shrink-0 items-center justify-center rounded-full p-[2px]" style="width:${size}px;height:${size}px;background:conic-gradient(from 200deg, rgb(var(--acc)), rgb(var(--b600)), rgb(var(--acc)))" aria-hidden="true">
+         <span class="flex h-full w-full items-center justify-center rounded-full bg-slate-100 font-serif text-slate-900" style="font-size:${size * 0.36}px">${esc(name.split(" ").map((w) => w[0]).slice(0, 2).join(""))}</span></span>`;
+}
+function viewBoard() {
+  const list = db.editorial_board.slice().sort((a, b) => a.sort_order - b.sort_order);
+  const grp = (k) => list.filter((m) => (m.position_type || "member") === k);
+  const chief = grp("chief"), deputies = grp("deputy"), members = grp("member");
+  const person = (m) => `<li class="card group flex items-center gap-4 p-5 transition duration-300 hover:-translate-y-1 hover:border-brand-600/60 hover:shadow-[0_18px_40px_-18px_rgb(var(--b600)/0.6)]">
+      ${avatar(m, 60)}
+      <div><p class="font-semibold text-slate-900">${esc(tr(m.full_name))}</p><p class="text-sm text-accent">${esc(tr(m.position))}</p><p class="text-sm text-slate-500">${esc(tr(m.affiliation))}</p></div></li>`;
+  return `<div>
+    <h1 class="text-4xl font-light sm:text-5xl">${esc(t("board.title"))}</h1>
+    ${chief.map((m) => `<section class="card mt-10 flex flex-col items-start gap-6 p-8 sm:flex-row sm:items-center">
+      ${avatar(m, 112)}
+      <div><p class="text-sm text-accent">${esc(t("g_chief"))}</p><p class="mt-1 font-serif text-3xl text-slate-900">${esc(tr(m.full_name))}</p><p class="mt-2 text-slate-500">${esc(tr(m.affiliation))}</p></div>
+    </section>`).join("")}
+    ${deputies.length ? `<h2 class="mt-12 text-xl">${esc(t("g_deputy"))}</h2><ul class="mt-5 grid gap-4 sm:grid-cols-2">${deputies.map(person).join("")}</ul>` : ""}
+    ${members.length ? `<h2 class="mt-12 text-xl">${esc(t("g_member"))}</h2><ul class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">${members.map(person).join("")}</ul>` : ""}
+  </div>`;
+}
+
+/* ---------- admin: settings */
+function viewAdminSettings() {
+  const j = journal();
+  return adminShell(`<form data-form="settings" class="card space-y-5">
+    <h1 class="text-2xl">${esc(t("settings"))}</h1>
+    <div class="flex flex-wrap items-center gap-5">
+      <div class="flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">${logoMark(56)}</div>
+      <div class="space-y-2">
+        <label class="label" for="logo">${esc(t("logo"))}</label>
+        <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/svg+xml" class="input max-w-xs">
+        <p class="text-xs text-slate-500">${esc(t("logoHint"))}</p>
+        ${j.logo ? `<button type="button" data-act="removeLogo" class="text-sm text-red-400 hover:underline">${esc(t("removeLogo"))}</button>` : ""}
+      </div>
+    </div>
+    ${i18nFields("title", t("common.title"), j.title)}
+    ${i18nFields("description", t("submit.abstract"), j.description, true)}
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label><span class="label">ISSN (online)</span><input name="issn_online" value="${esc(j.issn_online)}" class="input"></label>
+      <label><span class="label">${esc(t("home.publisher"))}</span><input name="publisher" value="${esc(j.publisher)}" class="input"></label>
+      <label><span class="label">${esc(t("contactEmail"))}</span><input name="contact_email" type="email" value="${esc(j.contact_email)}" class="input"></label>
+    </div>
+    <label class="block"><span class="label">${esc(t("indexesField"))}</span><input name="indexes" value="${esc((j.indexes || []).join(", "))}" class="input"></label>
+    <div class="grid gap-3 sm:grid-cols-3"><label><span class="label">${esc(t("cfpDeadline"))}</span><input name="cfp_deadline" type="date" value="${esc(j.cfp_deadline)}" class="input"></label></div>
+    ${i18nFields("cfp_text", t("cfpText"), j.cfp_text, true)}
+    <button class="btn-primary">${esc(t("common.save"))}</button>
+  </form>`, "admin-settings");
+}
+const readFile = (file, max = 300 * 1024) => new Promise((ok, bad) => {
+  if (!file || !file.size) return ok(null);
+  if (file.size > max) return bad(new Error("big"));
+  const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = bad; r.readAsDataURL(file);
+});
+
+/* ---------- admin: editorial board */
+function viewAdminBoard() {
+  const list = db.editorial_board.slice().sort((a, b) => a.sort_order - b.sort_order);
+  return adminShell(`<div class="card">
+    <div class="mb-4 flex items-center justify-between gap-3"><h1 class="text-2xl">${esc(t("nav.board"))}</h1><a href="#admin-member-new" class="btn-primary">+ ${esc(t("addMember"))}</a></div>
+    <ul class="divide-y divide-slate-200">${list.map((m) => `<li class="flex items-center gap-4 py-3">
+      ${avatar(m, 40)}<div class="flex-1"><a href="#admin-member-${m.id}" class="font-medium text-brand-700 hover:underline">${esc(tr(m.full_name))}</a><p class="text-xs text-slate-500">${esc(tr(m.position))} · ${esc(t("g_" + (m.position_type || "member")))}</p></div>
+    </li>`).join("")}</ul></div>`, "admin-board");
+}
+function viewAdminMember(id) {
+  const m = id === "new" ? null : by("editorial_board", id);
+  if (id !== "new" && !m) return adminShell(notFound(), "admin-board");
+  return adminShell(`<div class="space-y-4">${back("admin-board")}
+    <form data-form="member" data-id="${m?.id || ""}" class="card space-y-4">
+      ${m ? `<div class="flex items-center gap-4">${avatar(m, 64)}</div>` : ""}
+      ${i18nFields("full_name", t("auth.fullName"), m?.full_name)}
+      ${i18nFields("position", t("admin.role"), m?.position)}
+      ${i18nFields("affiliation", t("auth.affiliation"), m?.affiliation)}
+      <div class="grid gap-3 sm:grid-cols-3">
+        <label><span class="label">${esc(t("group"))}</span><select name="position_type" class="input">${["chief", "deputy", "member"].map((g) => `<option value="${g}" ${g === (m?.position_type || "member") ? "selected" : ""}>${esc(t("g_" + g))}</option>`).join("")}</select></label>
+        <label><span class="label">Sort</span><input name="sort_order" type="number" value="${m?.sort_order ?? 10}" class="input"></label>
+        <label><span class="label">${esc(t("photo"))}</span><input name="photo" type="file" accept="image/*" class="input"></label>
+      </div>
+      <div class="flex flex-wrap gap-3"><button class="btn-primary">${esc(t("common.save"))}</button>
+      ${m ? `<button type="button" data-act="deleteMember" data-id="${m.id}" class="btn-secondary text-red-400">${esc(t("common.delete"))}</button>` : ""}</div>
+    </form></div>`, "admin-board");
+}
+
+/* ---------- 3D tilt on covers (follows the pointer, resets on leave) */
+let tiltEl = null;
+document.addEventListener("pointermove", (e) => {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = e.target.closest?.(".tilt");
+  if (tiltEl && tiltEl !== el) { tiltEl.style.transform = ""; tiltEl.style.boxShadow = ""; }
+  tiltEl = el;
+  if (!el) return;
+  const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+  el.style.transform = `perspective(700px) rotateY(${x * 18}deg) rotateX(${-y * 18}deg) scale(1.03)`;
+  el.style.boxShadow = `${-x * 24}px ${24 - y * 10}px 40px -14px rgb(var(--b600) / 0.45)`;
+});
+
+/* ---------------------------------------------------------- batch 3 additions */
+Object.assign(EXTRA.uz, {
+  indexedIn: "Indekslangan bazalar", indexesField: "Indeks bazalari (vergul bilan)", numbersTitle: "Jurnal raqamlarda",
+  nArticles: "nashr etilgan maqola", nCountries: "mamlakatdan mualliflar", nDays: "kun — o'rtacha qaror muddati", nRate: "qabul qilish darajasi",
+  cfpTitle: "Keyingi son uchun maqolalar qabul qilinmoqda", cfpDeadline: "Qabul muddati", cfpText: "Chaqiriq matni", cfpClosed: "Qabul yopildi",
+  days: "kun", hours: "soat", minutes: "daqiqa", seconds: "soniya",
+  news: "Yangiliklar", allNews: "Barcha yangiliklar", readMore: "Batafsil", addNews: "Yangilik qo'shish", pinned: "Yuqorida ko'rsatish", date: "Sana",
+});
+Object.assign(EXTRA.ru, {
+  indexedIn: "Индексируется в", indexesField: "Базы индексирования (через запятую)", numbersTitle: "Журнал в цифрах",
+  nArticles: "опубликованных статей", nCountries: "стран авторов", nDays: "дней — среднее время до решения", nRate: "доля принятых статей",
+  cfpTitle: "Идёт приём статей в следующий выпуск", cfpDeadline: "Срок приёма", cfpText: "Текст объявления", cfpClosed: "Приём закрыт",
+  days: "дн.", hours: "ч", minutes: "мин", seconds: "сек",
+  news: "Новости", allNews: "Все новости", readMore: "Подробнее", addNews: "Добавить новость", pinned: "Закрепить", date: "Дата",
+});
+Object.assign(EXTRA.en, {
+  indexedIn: "Indexed in", indexesField: "Indexing databases (comma-separated)", numbersTitle: "The journal in numbers",
+  nArticles: "published articles", nCountries: "countries of authors", nDays: "days — average time to a decision", nRate: "acceptance rate",
+  cfpTitle: "Now accepting papers for the next issue", cfpDeadline: "Deadline", cfpText: "Call text", cfpClosed: "Submissions closed",
+  days: "days", hours: "hours", minutes: "min", seconds: "sec",
+  news: "News", allNews: "All news", readMore: "Read more", addNews: "Add news", pinned: "Pin to top", date: "Date",
+});
+
+// Sample content for the demo (fictional journal): indexing list, call for papers, news.
+(function patchSeed3() {
+  const J = SEED.journals[0];
+  if (!J.indexes) {
+    J.indexes = ["Google Scholar", "Crossref", "OpenAlex", "BASE", "ROAD", "CyberLeninka"];
+    J.cfp_deadline = "2026-12-20";
+    J.cfp_text = {
+      uz: "4-son (dekabr 2026) uchun iqtisodiyot, ta'lim va raqamli texnologiyalar bo'yicha maqolalar qabul qilinadi.",
+      ru: "Принимаются статьи в выпуск 4 (декабрь 2026) по экономике, образованию и цифровым технологиям.",
+      en: "Papers on economics, education and digital technology are welcome for Issue 4 (December 2026).",
+    };
+  }
+  if (!SEED.news) SEED.news = [
+    { id: "n1", date: "2026-11-05", pinned: true,
+      title: { uz: "4-son uchun maqolalar qabuli boshlandi", ru: "Начат приём статей в выпуск 4", en: "Submissions open for Issue 4" },
+      body: { uz: "<p>Tahririyat 2026-yil dekabr soni uchun maqolalarni 20-dekabrgacha qabul qiladi. Talablar «Mualliflar uchun» sahifasida.</p>", ru: "<p>Редакция принимает статьи в декабрьский выпуск до 20 декабря. Требования — на странице «Авторам».</p>", en: "<p>The editors accept papers for the December 2026 issue until 20 December. Requirements are on the “For authors” page.</p>" } },
+    { id: "n2", date: "2026-10-18",
+      title: { uz: "Xalqaro konferensiya materiallari nashr etildi", ru: "Опубликованы материалы международной конференции", en: "International conference proceedings published" },
+      body: { uz: "<p>Maxsus son konferensiyada taqdim etilgan eng yaxshi ma'ruzalarni o'z ichiga oladi.</p>", ru: "<p>Специальный выпуск включает лучшие доклады конференции.</p>", en: "<p>The special issue collects the best papers presented at the conference.</p>" } },
+    { id: "n3", date: "2026-09-02",
+      title: { uz: "Tahrir hay'atiga yangi a'zolar qo'shildi", ru: "В редколлегию вошли новые члены", en: "New members join the editorial board" },
+      body: { uz: "<p>Koreya va Turkiyadan olimlar tahrir hay'atiga qo'shildi.</p>", ru: "<p>В редколлегию вошли учёные из Кореи и Турции.</p>", en: "<p>Researchers from Korea and Türkiye have joined the board.</p>" } },
+  ];
+  if (!SEED.submissions.some((x) => x.id === "sub-5")) {
+    const at = (d) => new Date(d).toISOString();
+    SEED.submissions.push({ id: "sub-5", journal_id: "journal-1", section_id: "sec-research", submitter_id: "u-author2", editor_id: "u-admin", status: "rejected",
+      title: "Social media use and exam performance: a pilot survey", abstract: "A small pilot survey of first-year students. (Demo abstract.)", keywords: ["social media", "students"], language: "en",
+      references: "", cover_letter: null, decision_note: "The sample is too small for the conclusions drawn.", submitted_at: at("2026-07-01"), created_at: at("2026-07-01"), updated_at: at("2026-07-24") });
+    SEED.submission_authors.push({ id: "sa-6", submission_id: "sub-5", full_name: "John Lee", email: "author2@demo.uz", affiliation: "Westminster International University in Tashkent", orcid: null, is_corresponding: true, sort_order: 0 });
+    SEED.submission_events.push({ id: 90, submission_id: "sub-5", actor_id: null, from_status: null, to_status: "submitted", note: null, created_at: at("2026-07-01") },
+      { id: 91, submission_id: "sub-5", actor_id: null, from_status: "submitted", to_status: "rejected", note: "The sample is too small for the conclusions drawn.", created_at: at("2026-07-24") });
+    if (!db.submissions.some((x) => x.id === "sub-5")) ["submissions", "submission_authors", "submission_events"].forEach((k) => db[k].push(...clone(SEED[k].filter((r) => r.submission_id === "sub-5" || r.id === "sub-5"))));
+  }
+  if (!db.news) db.news = clone(SEED.news);
+  const j = journal();
+  if (!j.indexes) Object.assign(j, { indexes: clone(J.indexes), cfp_deadline: J.cfp_deadline, cfp_text: clone(J.cfp_text) });
+})();
+
+/* ---------- countries: merge spellings in Uzbek / Russian / English */
+const COUNTRIES = {
+  UZ: { uz: "O'zbekiston", ru: "Узбекистан", en: "Uzbekistan", a: ["o'zbekiston", "uzbekistan", "узбекистан", "ўзбекистон"] },
+  KZ: { uz: "Qozog'iston", ru: "Казахстан", en: "Kazakhstan", a: ["qozog'iston", "kazakhstan", "казахстан"] },
+  KG: { uz: "Qirg'iziston", ru: "Кыргызстан", en: "Kyrgyzstan", a: ["qirg'iziston", "kyrgyzstan", "кыргызстан", "киргизия"] },
+  TJ: { uz: "Tojikiston", ru: "Таджикистан", en: "Tajikistan", a: ["tojikiston", "tajikistan", "таджикистан"] },
+  TM: { uz: "Turkmaniston", ru: "Туркменистан", en: "Turkmenistan", a: ["turkmaniston", "turkmenistan", "туркменистан"] },
+  RU: { uz: "Rossiya", ru: "Россия", en: "Russia", a: ["rossiya", "russia", "россия"] },
+  TR: { uz: "Turkiya", ru: "Турция", en: "Türkiye", a: ["turkiya", "turkey", "türkiye", "турция"] },
+  KR: { uz: "Koreya", ru: "Корея", en: "Korea", a: ["koreya", "korea", "south korea", "корея"] },
+  DE: { uz: "Germaniya", ru: "Германия", en: "Germany", a: ["germaniya", "germany", "германия"] },
+};
+function countryOf(aff) {
+  const raw = (aff || "").split(",").pop().trim();
+  if (!raw) return null;
+  const low = raw.toLowerCase().replace(/[ʻʼ‘’`]/g, "'");
+  for (const [code, c] of Object.entries(COUNTRIES)) if (c.a.includes(low)) return { key: code, label: c[S.lang] };
+  return { key: low, label: raw };
+}
+/* ---------- figures computed from the journal's own data */
+function journalNumbers() {
+  const pub = db.articles.filter((a) => a.status === "published");
+  const countries = new Set();
+  pub.forEach((a) => a.authors.forEach((au) => { const c = countryOf(au.affiliation); if (c) countries.add(c.key); }));
+  const decided = ["accepted", "rejected", "revision_required"];
+  const days = [];
+  db.submissions.forEach((s) => {
+    const ev = db.submission_events.filter((e) => e.submission_id === s.id).sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const start = ev.find((e) => e.to_status === "submitted"), end = ev.find((e) => decided.includes(e.to_status));
+    if (start && end) days.push((new Date(end.created_at) - new Date(start.created_at)) / 864e5);
+  });
+  const finals = db.submissions.filter((s) => ["accepted", "published", "rejected"].includes(s.status));
+  const acc = finals.filter((s) => s.status !== "rejected").length;
+  return [
+    [pub.length, "", t("nArticles")],
+    [countries.size, "", t("nCountries")],
+    [days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : 0, "", t("nDays")],
+    [finals.length ? Math.round((acc / finals.length) * 100) : 0, "%", t("nRate")],
+  ];
+}
+
+/* ---------- call for papers */
+function cfpCard(compact) {
+  const j = journal();
+  if (!j.cfp_deadline) return "";
+  const end = new Date(j.cfp_deadline + "T23:59:59");
+  const open = end > new Date();
+  const unit = (k, l) => `<div class="min-w-[4.5rem] rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-center"><span data-cd="${k}" class="block font-serif text-2xl text-slate-900 tabular-nums">--</span><span class="text-xs text-slate-500">${esc(t(l))}</span></div>`;
+  if (compact) return `<div class="card mb-6 flex flex-wrap items-center justify-between gap-3 border-accent/40 p-4 text-sm"><span class="text-slate-700">${esc(t("cfpTitle"))}</span><span class="font-semibold text-accent">${esc(t("cfpDeadline"))}: ${esc(fmtDate(end.toISOString()))}</span></div>`;
+  return `<section class="mx-auto max-w-7xl px-5 py-8">
+    <div class="card relative overflow-hidden border-accent/40 p-8 sm:p-10">
+      <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" aria-hidden="true"></div>
+      <div class="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div class="max-w-xl">
+          <h2 class="text-2xl sm:text-3xl">${esc(open ? t("cfpTitle") : t("cfpClosed"))}</h2>
+          <p class="mt-3 text-slate-600">${esc(tr(j.cfp_text))}</p>
+          <p class="mt-3 text-sm text-accent">${esc(t("cfpDeadline"))}: ${esc(fmtDate(end.toISOString()))}</p>
+        </div>
+        ${open ? `<div class="flex flex-col items-start gap-5 lg:items-end">
+          <div class="flex gap-2" data-countdown="${end.toISOString()}" aria-live="off">${unit("d", "days")}${unit("h", "hours")}${unit("m", "minutes")}${unit("s", "seconds")}</div>
+          <a href="#submit" class="btn-gold px-7 py-3">${esc(t("home.cta"))}</a>
+        </div>` : ""}
+      </div>
+    </div>
+  </section>`;
+}
+function tickCountdown() {
+  document.querySelectorAll("[data-countdown]").forEach((el) => {
+    let ms = Math.max(0, new Date(el.dataset.countdown) - new Date());
+    const parts = { d: Math.floor(ms / 864e5), h: Math.floor(ms / 36e5) % 24, m: Math.floor(ms / 6e4) % 60, s: Math.floor(ms / 1e3) % 60 };
+    for (const [k, v] of Object.entries(parts)) { const n = el.querySelector(`[data-cd="${k}"]`); if (n) n.textContent = String(v).padStart(k === "d" ? 1 : 2, "0"); }
+  });
+}
+setInterval(tickCountdown, 1000);
+
+/* ---------- indexing strip + numbers + news blocks for the home page */
+function indexStrip() {
+  const list = journal().indexes || [];
+  if (!list.length) return "";
+  return `<section class="mx-auto max-w-7xl px-5 py-10">
+    <h2 class="text-sm font-medium text-slate-500">${esc(t("indexedIn"))}</h2>
+    <ul class="mt-5 flex flex-wrap items-center gap-x-10 gap-y-4">${list.map((n) => `<li class="font-serif text-lg text-slate-600 transition hover:text-slate-900 sm:text-xl">${esc(n)}</li>`).join("")}</ul>
+  </section>`;
+}
+function numbersBlock() {
+  return `<section class="mx-auto max-w-7xl px-5 py-12">
+    <h2 class="text-3xl sm:text-4xl">${esc(t("numbersTitle"))}</h2>
+    <dl class="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">${journalNumbers().map(([n, suf, l]) => `<div class="border-t border-slate-200 pt-5">
+      <dt class="sr-only">${esc(l)}</dt>
+      <dd class="font-serif text-5xl font-light text-slate-900 tabular-nums"><span data-count="${n}">${n}</span>${suf}</dd>
+      <dd class="mt-2 text-sm text-slate-500">${esc(l)}</dd></div>`).join("")}</dl>
+  </section>`;
+}
+const newsSorted = () => db.news.slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date));
+function newsCard(n) {
+  const plain = tr(n.body).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return `<li><a href="#news-${n.id}" class="card group block h-full p-6 transition hover:border-brand-600/60">
+    <p class="text-xs text-slate-500">${esc(fmtDate(n.date))}${n.pinned ? ` <span class="ml-2 text-accent">★</span>` : ""}</p>
+    <h3 class="mt-3 text-lg leading-snug transition group-hover:text-brand-700">${esc(tr(n.title))}</h3>
+    <p class="mt-2 line-clamp-3 text-sm text-slate-500">${esc(plain)}</p>
+  </a></li>`;
+}
+function newsBlock() {
+  const list = newsSorted().slice(0, 3);
+  if (!list.length) return "";
+  return `<section class="mx-auto max-w-7xl px-5 py-12">
+    <div class="flex flex-wrap items-baseline justify-between gap-3"><h2 class="text-3xl sm:text-4xl">${esc(t("news"))}</h2><a href="#news" class="text-sm font-semibold text-brand-700 hover:underline">${esc(t("allNews"))}</a></div>
+    <ul class="mt-8 grid gap-5 md:grid-cols-3">${list.map(newsCard).join("")}</ul>
+  </section>`;
+}
+function viewNews() {
+  return `<div><h1 class="text-4xl font-light sm:text-5xl">${esc(t("news"))}</h1>
+    <ul class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">${newsSorted().map(newsCard).join("") || `<li class="text-slate-500">${esc(t("common.none"))}</li>`}</ul></div>`;
+}
+function viewNewsItem(id) {
+  const n = by("news", id);
+  if (!n) return notFound();
+  return `<article class="card mx-auto max-w-3xl p-8 sm:p-12">${back("news")}
+    <p class="mt-6 text-sm text-slate-500">${esc(fmtDate(n.date))}</p>
+    <h1 class="mt-2 text-3xl leading-tight sm:text-4xl">${esc(tr(n.title))}</h1>
+    <div class="prose-content mt-6 text-[1.05rem]">${tr(n.body)}</div></article>`;
+}
+
+/* ---------- count-up animation for the numbers, once, when they scroll into view */
+function animateCounts() {
+  const els = document.querySelectorAll("[data-count]");
+  if (!els.length || matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    io.unobserve(e.target);
+    const el = e.target, to = Number(el.dataset.count), t0 = performance.now();
+    const step = (now) => { const p = Math.min((now - t0) / 1400, 1); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); };
+    el.textContent = "0"; requestAnimationFrame(step);
+  }), { threshold: 0.6 });
+  els.forEach((el) => io.observe(el));
+}
+
+/* ---------- admin: news */
+function viewAdminNews() {
+  return adminShell(`<div class="card">
+    <div class="mb-4 flex items-center justify-between gap-3"><h1 class="text-2xl">${esc(t("news"))}</h1><a href="#admin-newsitem-new" class="btn-primary">+ ${esc(t("addNews"))}</a></div>
+    <ul class="divide-y divide-slate-200">${newsSorted().map((n) => `<li class="flex items-center justify-between gap-4 py-3">
+      <a href="#admin-newsitem-${n.id}" class="font-medium text-brand-700 hover:underline">${esc(tr(n.title))}</a>
+      <span class="shrink-0 text-xs text-slate-500">${n.pinned ? "★ " : ""}${esc(fmtDate(n.date))}</span></li>`).join("")}</ul></div>`, "admin-news");
+}
+function viewAdminNewsItem(id) {
+  const n = id === "new" ? null : by("news", id);
+  if (id !== "new" && !n) return adminShell(notFound(), "admin-news");
+  return adminShell(`<div class="space-y-4">${back("admin-news")}
+    <form data-form="news" data-id="${n?.id || ""}" class="card space-y-4">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label><span class="label">${esc(t("date"))}</span><input type="date" name="date" value="${esc(n?.date || new Date().toISOString().slice(0, 10))}" class="input" required></label>
+        <label class="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="pinned" ${n?.pinned ? "checked" : ""}> ${esc(t("pinned"))}</label>
+      </div>
+      ${i18nFields("title", t("common.title"), n?.title)}
+      ${i18nFields("body", t("admin.body"), n?.body, true)}
+      <div class="flex flex-wrap gap-3"><button class="btn-primary">${esc(t("common.save"))}</button>
+      ${n ? `<button type="button" data-act="deleteNews" data-id="${n.id}" class="btn-secondary text-red-400">${esc(t("common.delete"))}</button>` : ""}</div>
+    </form></div>`, "admin-news");
+}
+
+/* ---------------------------------------------------------- batch 4 additions */
+Object.assign(EXTRA.uz, {
+  perMonth: "Oylik yuborilgan maqolalar", byCountry: "Mamlakatlar bo'yicha maqolalar", byStatus: "Qo'lyozmalar holati", reviewTime: "O'rtacha qaror muddati",
+  stepDetails: "Maqola", stepAuthors: "Mualliflar", stepFiles: "Fayl", stepConfirm: "Tasdiqlash", next: "Keyingi", prev: "Orqaga", stepOf: "{n}-qadam, jami {total}",
+  notifications: "Bildirishnomalar", markAll: "Hammasini o'qilgan deb belgilash", noNotif: "Yangi bildirishnomalar yo'q",
+  n_status: "«{title}» holati: {status}", n_invite: "Sizga taqriz so'rovi: «{title}»", n_review: "Taqriz yakunlandi: «{title}»", n_new: "Yangi qo'lyozma: «{title}»",
+});
+Object.assign(EXTRA.ru, {
+  perMonth: "Поступление статей по месяцам", byCountry: "Статьи по странам", byStatus: "Статусы рукописей", reviewTime: "Среднее время до решения",
+  stepDetails: "Статья", stepAuthors: "Авторы", stepFiles: "Файл", stepConfirm: "Проверка", next: "Далее", prev: "Назад", stepOf: "Шаг {n} из {total}",
+  notifications: "Уведомления", markAll: "Отметить все как прочитанные", noNotif: "Новых уведомлений нет",
+  n_status: "Статус «{title}»: {status}", n_invite: "Вам запрос на рецензию: «{title}»", n_review: "Рецензия готова: «{title}»", n_new: "Новая рукопись: «{title}»",
+});
+Object.assign(EXTRA.en, {
+  perMonth: "Submissions per month", byCountry: "Articles by country", byStatus: "Manuscripts by status", reviewTime: "Average time to decision",
+  stepDetails: "Article", stepAuthors: "Authors", stepFiles: "File", stepConfirm: "Review", next: "Next", prev: "Back", stepOf: "Step {n} of {total}",
+  notifications: "Notifications", markAll: "Mark all as read", noNotif: "No new notifications",
+  n_status: "“{title}” is now: {status}", n_invite: "Review request: “{title}”", n_review: "Review completed: “{title}”", n_new: "New manuscript: “{title}”",
+});
+
+/* ---------- notifications */
+(function patchSeed4() {
+  if (!SEED.notifications) {
+    const at = (d) => new Date(d).toISOString();
+    SEED.notifications = [
+      { id: "nt1", user_id: "u-author", type: "status", sub: "sub-2", status: "revision_required", link: "mysub-sub-2", read: false, created_at: at("2026-10-03") },
+      { id: "nt2", user_id: "u-reviewer", type: "invite", sub: "sub-1", link: "review-rev-1", read: false, created_at: at("2026-10-05") },
+      { id: "nt3", user_id: "u-admin", type: "new", sub: "sub-4", link: "admin-sub-sub-4", read: false, created_at: at("2026-11-11") },
+      { id: "nt4", user_id: "u-admin", type: "review", sub: "sub-1", link: "admin-sub-sub-1", read: true, created_at: at("2026-10-28") },
+    ];
+  }
+  if (!db.notifications) db.notifications = clone(SEED.notifications);
+})();
+function notify(userIds, type, sub, link, status) {
+  [].concat(userIds).filter(Boolean).forEach((uid) => db.notifications.push({ id: newId(), user_id: uid, type, sub: sub.id, status, link, read: false, created_at: now() }));
+}
+const staffIds = () => db.profiles.filter((p) => ["editor", "admin"].includes(p.role)).map((p) => p.id);
+function notifText(n) {
+  const sub = by("submissions", n.sub);
+  const title = sub ? (sub.title.length > 60 ? sub.title.slice(0, 57) + "…" : sub.title) : "";
+  return t("n_" + n.type, { title, status: n.status ? t("status." + n.status) : "" });
+}
+function bell() {
+  const u = me();
+  if (!u) return "";
+  const mine = db.notifications.filter((n) => n.user_id === u.id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const unread = mine.filter((n) => !n.read).length;
+  return `<div class="relative">
+    <button data-act="bell" class="navlink relative rounded-full p-1.5" aria-label="${esc(t("notifications"))}${unread ? ` (${unread})` : ""}" aria-expanded="${!!S.bellOpen}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0"/></svg>
+      ${unread ? `<span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-ink">${unread}</span>` : ""}
+    </button>
+    ${S.bellOpen ? `<div class="absolute right-0 top-11 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden whitespace-normal rounded-2xl border border-slate-200 bg-slate-100 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3"><p class="text-sm font-semibold text-slate-900">${esc(t("notifications"))}</p>
+        ${unread ? `<button data-act="markAll" class="text-xs text-brand-700 hover:underline">${esc(t("markAll"))}</button>` : ""}</div>
+      <ul class="max-h-96 overflow-y-auto">${mine.length ? mine.slice(0, 12).map((n) => `<li><button data-act="openNotif" data-id="${n.id}" class="flex w-full gap-3 px-4 py-3 text-left text-sm transition hover:bg-slate-200/60">
+        <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-accent"}" aria-hidden="true"></span>
+        <span><span class="${n.read ? "text-slate-500" : "text-slate-900"}">${esc(notifText(n))}</span><span class="mt-0.5 block text-xs text-slate-500">${esc(fmtDate(n.created_at))}</span></span>
+      </button></li>`).join("") : `<li class="px-4 py-6 text-center text-sm text-slate-500">${esc(t("noNotif"))}</li>`}</ul>
+    </div>` : ""}
+  </div>`;
+}
+
+/* ---------- admin charts (plain SVG, drawn from the data) */
+function barChart(rows, { suffix = "" } = {}) {
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  const W = 520, H = 200, pad = 28, bw = (W - pad) / rows.length;
+  return `<svg viewBox="0 0 ${W} ${H + 28}" class="w-full" role="img" aria-label="${esc(rows.map((r) => `${r[0]}: ${r[1]}`).join(", "))}">
+    ${[0.25, 0.5, 0.75, 1].map((f) => `<line x1="${pad}" x2="${W}" y1="${H - f * (H - 20)}" y2="${H - f * (H - 20)}" stroke="rgb(var(--s200))" stroke-dasharray="3 4"/>`).join("")}
+    ${rows.map(([l, v], i) => { const h = (v / max) * (H - 20), x = pad + i * bw + bw * 0.22, w = bw * 0.56; return `
+      <rect class="chart-bar" x="${x}" y="${H - h}" width="${w}" height="${h}" rx="6" fill="url(#gbar)" style="animation-delay:${i * 70}ms"/>
+      <text x="${x + w / 2}" y="${H - h - 7}" text-anchor="middle" font-size="12" fill="rgb(var(--s800))">${v}${suffix}</text>
+      <text x="${x + w / 2}" y="${H + 18}" text-anchor="middle" font-size="11" fill="rgb(var(--s500))">${esc(l)}</text>`; }).join("")}
+    <defs><linearGradient id="gbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(var(--b600))"/><stop offset="1" stop-color="rgb(var(--b600))" stop-opacity="0.25"/></linearGradient></defs>
+  </svg>`;
+}
+function hBars(rows) {
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return `<ul class="space-y-3">${rows.map(([l, v], i) => `<li class="text-sm">
+    <div class="mb-1 flex justify-between"><span class="text-slate-700">${esc(l)}</span><span class="tabular-nums text-slate-500">${v}</span></div>
+    <div class="h-2 overflow-hidden rounded-full bg-slate-200"><div class="chart-hbar h-full rounded-full" style="width:${(v / max) * 100}%;background:linear-gradient(90deg, rgb(var(--acc)), rgb(var(--b600)));animation-delay:${i * 80}ms"></div></div>
+  </li>`).join("")}</ul>`;
+}
+function donut(rows) {
+  const total = rows.reduce((a, r) => a + r[1], 0) || 1;
+  const colors = ["#38bdf8", "#818cf8", "#fbbf24", "#fb923c", "#34d399", "#f87171", "rgb(var(--b600))", "rgb(var(--s400))"];
+  let acc = 0;
+  const C = 2 * Math.PI * 52;
+  return `<div class="flex flex-wrap items-center gap-6">
+    <svg viewBox="0 0 140 140" class="h-36 w-36 -rotate-90" role="img" aria-label="${esc(rows.map((r) => `${r[0]}: ${r[1]}`).join(", "))}">
+      <circle cx="70" cy="70" r="52" fill="none" stroke="rgb(var(--s200))" stroke-width="16"/>
+      ${rows.map(([, v], i) => { const len = (v / total) * C, el = `<circle cx="70" cy="70" r="52" fill="none" stroke="${colors[i % colors.length]}" stroke-width="16" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-acc}"/>`; acc += len; return el; }).join("")}
+    </svg>
+    <ul class="space-y-1.5 text-sm">${rows.map(([l, v], i) => `<li class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full" style="background:${colors[i % colors.length]}" aria-hidden="true"></span><span class="text-slate-700">${esc(l)}</span><span class="tabular-nums text-slate-500">${v}</span></li>`).join("")}</ul>
+  </div>`;
+}
+function adminCharts() {
+  // submissions per month, last 6 months
+  const nowD = new Date(), months = [];
+  for (let k = 5; k >= 0; k--) { const d = new Date(nowD.getFullYear(), nowD.getMonth() - k, 1); months.push([d.getFullYear(), d.getMonth()]); }
+  const fmtM = (y, m) => new Intl.DateTimeFormat(S.lang === "ru" ? "ru-RU" : "en-GB", { month: "short" }).format(new Date(y, m, 1));
+  const uzM = ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"];
+  const perMonth = months.map(([y, m]) => [S.lang === "uz" ? uzM[m] : fmtM(y, m), db.submissions.filter((s) => { const d = new Date(s.submitted_at || s.created_at); return s.status !== "draft" && d.getFullYear() === y && d.getMonth() === m; }).length]);
+  // articles by country
+  const cc = {};
+  db.articles.filter((a) => a.status === "published").forEach((a) => { const c = countryOf(a.authors[0]?.affiliation); if (c) { cc[c.key] = cc[c.key] || [c.label, 0]; cc[c.key][1]++; } });
+  const byCountry = Object.values(cc).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  // status mix
+  const st = {};
+  db.submissions.filter((s) => s.status !== "draft").forEach((s) => (st[s.status] = (st[s.status] || 0) + 1));
+  const byStatus = Object.entries(st).map(([k, v]) => [t("status." + k), v]);
+  const days = journalNumbers()[2][0];
+  return `<div class="mt-8 grid gap-5 xl:grid-cols-2">
+    <section class="card"><h2 class="mb-4 text-lg">${esc(t("perMonth"))}</h2>${barChart(perMonth)}</section>
+    <section class="card"><h2 class="mb-4 text-lg">${esc(t("byStatus"))}</h2>${donut(byStatus)}
+      <p class="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-500">${esc(t("reviewTime"))}: <span class="font-serif text-2xl text-slate-900">${days}</span> ${esc(t("days"))}</p></section>
+    <section class="card xl:col-span-2"><h2 class="mb-4 text-lg">${esc(t("byCountry"))}</h2>${hBars(byCountry)}</section>
+  </div>`;
+}
+
+/* ---------- step-by-step submission form */
+const STEP_KEYS = ["stepDetails", "stepAuthors", "stepFiles", "stepConfirm"];
+function stepHeader() {
+  return `<div class="mb-6">
+    <p class="mb-3 text-sm text-slate-500" id="step-label">${esc(t("stepOf", { n: 1, total: 4 }))}</p>
+    <ol class="grid grid-cols-4 gap-2" aria-label="${esc(t("submit.title"))}">${STEP_KEYS.map((k, i) => `<li data-step-ind="${i}" class="step-ind ${i === 0 ? "is-current" : ""}">
+      <span class="block h-1.5 rounded-full bg-slate-200"><span class="step-fill block h-full rounded-full bg-brand-600"></span></span>
+      <span class="mt-2 block text-xs text-slate-500">${esc(t(k))}</span></li>`).join("")}</ol>
+  </div>`;
+}
+function setStep(form, n) {
+  form.dataset.cur = n;
+  form.querySelectorAll("[data-step]").forEach((p) => (p.hidden = Number(p.dataset.step) !== n));
+  document.querySelectorAll("[data-step-ind]").forEach((el) => {
+    const i = Number(el.dataset.stepInd);
+    el.classList.toggle("is-done", i < n); el.classList.toggle("is-current", i === n);
+  });
+  const lab = document.getElementById("step-label"); if (lab) lab.textContent = t("stepOf", { n: n + 1, total: 4 });
+  if (n === 3) fillSummary(form);
+  form.querySelector(`[data-step="${n}"] input, [data-step="${n}"] textarea, [data-step="${n}"] select`)?.focus({ preventScroll: true });
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function fillSummary(form) {
+  const fd = new FormData(form), sec = by("sections", fd.get("section_id"));
+  const authors = [...form.querySelectorAll(".author-row")].map((r) => r.querySelector("[name=a_name]").value.trim()).filter(Boolean);
+  const file = fd.get("file");
+  const row = (l, v) => `<div class="grid gap-1 border-b border-slate-200 py-3 sm:grid-cols-[160px_1fr]"><dt class="text-sm text-slate-500">${esc(l)}</dt><dd class="text-sm text-slate-900">${esc(v)}</dd></div>`;
+  form.querySelector("#summary").innerHTML = row(t("submit.section"), tr(sec?.title)) + row(t("submit.articleTitle"), fd.get("title")) + row(t("submit.language"), t("langs." + fd.get("language")))
+    + row(t("submit.keywords"), fd.get("keywords")) + row(t("submit.authors"), authors.join(", ")) + row(t("submit.file"), file?.name || "—");
+}
+function viewSubmit() {
+  const u = me();
+  const secs = db.sections.slice().sort((a, b) => a.sort_order - b.sort_order);
+  const nav = (n) => `<div class="flex justify-between gap-3 pt-2">
+    ${n > 0 ? `<button type="button" data-act="stepPrev" class="btn-secondary">${esc(t("prev"))}</button>` : "<span></span>"}
+    ${n < 3 ? `<button type="button" data-act="stepNext" class="btn-primary">${esc(t("next"))}</button>` : `<button class="btn-gold px-7">${esc(t("submit.send"))}</button>`}
+  </div>`;
+  return `<div class="mx-auto max-w-3xl">
+    <h1 class="mb-6 text-3xl">${esc(t("submit.title"))}</h1>
+    ${cfpCard(true)}
+    <form data-form="submit" data-cur="0" class="card space-y-5 scroll-mt-28 p-6 sm:p-8" novalidate>
+      ${stepHeader()}
+      <div data-step="0" class="space-y-5">
+        <div><label class="label" for="section_id">${esc(t("submit.section"))}</label><select class="input" id="section_id" name="section_id">${secs.map((s) => `<option value="${s.id}">${esc(tr(s.title))}</option>`).join("")}</select></div>
+        <div><label class="label" for="title">${esc(t("submit.articleTitle"))}</label><input class="input" id="title" name="title" required></div>
+        <div><label class="label" for="language">${esc(t("submit.language"))}</label><select class="input" id="language" name="language">${["uz", "ru", "en"].map((l) => `<option value="${l}">${esc(t("langs." + l))}</option>`).join("")}</select></div>
+        <div><label class="label" for="abstract">${esc(t("submit.abstract"))}</label><textarea class="input min-h-36" id="abstract" name="abstract" required></textarea></div>
+        <div><label class="label" for="keywords">${esc(t("submit.keywords"))}</label><input class="input" id="keywords" name="keywords" required><p class="mt-1 text-xs text-slate-500">${esc(t("submit.keywordsHint"))}</p></div>
+        ${nav(0)}
+      </div>
+      <div data-step="1" class="space-y-4" hidden>
+        <div id="authors" class="space-y-3">${authorRow({ full_name: u.full_name, email: u.email, affiliation: u.affiliation, orcid: u.orcid }, 0)}</div>
+        <button type="button" data-act="addAuthor" class="btn-secondary">+ ${esc(t("submit.addAuthor"))}</button>
+        ${nav(1)}
+      </div>
+      <div data-step="2" class="space-y-5" hidden>
+        <div><label class="label" for="file">${esc(t("submit.file"))}</label>
+          <label for="file" class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-10 text-center transition hover:border-brand-600">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-brand-700" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <span id="file-name" class="text-sm text-slate-700">${esc(t("submit.fileHint"))}</span>
+          </label>
+          <input class="sr-only" id="file" name="file" type="file" required accept=".doc,.docx,.pdf" data-change="fileName"></div>
+        <div><label class="label" for="references">${esc(t("submit.references"))}</label><textarea class="input min-h-28" id="references" name="references"></textarea></div>
+        <div><label class="label" for="cover_letter">${esc(t("submit.coverLetter"))}</label><textarea class="input min-h-20" id="cover_letter" name="cover_letter"></textarea></div>
+        ${nav(2)}
+      </div>
+      <div data-step="3" class="space-y-5" hidden>
+        <dl id="summary"></dl>
+        <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="agree" required class="mt-1"> ${esc(t("submit.agree"))}</label>
+        ${nav(3)}
+      </div>
+    </form>
+  </div>`;
+}
+function validStep(form) {
+  const panel = form.querySelector(`[data-step="${form.dataset.cur}"]`);
+  for (const el of panel.querySelectorAll("input,textarea,select")) {
+    if (!el.checkValidity()) {
+      if (el.type === "file") { toast(t("submit.file")); document.querySelector('label[for="file"]')?.focus?.(); return false; }
+      el.reportValidity(); return false;
+    }
+  }
+  return true;
+}
+
+/* --------------------------------------------------------------- router */
+const PREFIX = [
+  ["admin-member-", viewAdminMember, "staff"], ["admin-article-", viewAdminArticle, "staff"], ["admin-page-", viewAdminPage, "staff"], ["admin-sub-", viewAdminSub, "staff"],
+  ["admin-newsitem-", viewAdminNewsItem, "staff"], ["news-", viewNewsItem], ["article-", viewArticle], ["issue-", viewIssue], ["page-", viewPage], ["mysub-", viewMySub, "user"], ["review-", viewReview, "user"],
+];
+const EXACT = {
+  home: viewHome, news: viewNews, "admin-news": [viewAdminNews, "staff"], archives: viewArchives, board: viewBoard, search: viewSearch,
+  login: () => viewAuth("login"), register: () => viewAuth("register"),
+  dashboard: [viewDashboard, "user"], submit: [viewSubmit, "user"],
+  admin: [viewAdmin, "staff"], "admin-submissions": [viewAdminSubs, "staff"], "admin-issues": [viewAdminIssues, "staff"],
+  "admin-articles": [viewAdminArticles, "staff"], "admin-users": [viewAdminUsers, "staff"], "admin-pages": [viewAdminPages, "staff"], "admin-board": [viewAdminBoard, "staff"], "admin-settings": [viewAdminSettings, "staff"],
+};
+function route() {
+  let h = decodeURIComponent(location.hash.slice(1)) || "home";
+  if (h === "current") { const c = publishedIssues()[0]; h = c ? "issue-" + c.id : "archives"; }
+  let fn, need, arg;
+  if (EXACT[h]) { const e = EXACT[h]; [fn, need] = Array.isArray(e) ? e : [e]; }
+  else for (const [p, f, n] of PREFIX) if (h.startsWith(p)) { fn = f; need = n; arg = h.slice(p.length); break; }
+  S.route = h;
+  if (!fn) return notFound();
+  if (need && !me()) { S.next = h; toast(t("needLogin")); return viewAuth("login"); }
+  if (need === "staff" && !isStaff()) return viewDashboard();
+  return fn(arg);
+}
+// Things that need the DOM after each render: scroll story on the home page.
+function afterRender() {
+  updateReadBar(); tickCountdown(); animateCounts();
+  const steps = document.querySelectorAll(".step");
+  if (!steps.length) return;
+  if (!("IntersectionObserver" in window)) return steps.forEach((s) => s.classList.add("is-on"));
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-on"); io.unobserve(e.target); } }), { threshold: 0.4 });
+  steps.forEach((s) => io.observe(s));
+}
+function render() {
+  document.documentElement.lang = S.lang;
+  const html = route();
+  document.getElementById("app").innerHTML = layout(html);
+  const r = S.route || "";
+  Scene.setMode(r === "home" ? "star" : /^(article-|page-)/.test(r) ? "book" : r === "archives" || r.startsWith("issue-") ? "stack" : r === "board" ? "globe" : "field");
+  if (render.last !== r) { document.getElementById("page")?.classList.add("page-enter"); render.last = r; }
+  afterRender();
+}
+window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+
+/* -------------------------------------------------------------- actions */
+const ACT = {
+  toggleTheme() { S.theme = S.theme === "light" ? "dark" : "light"; save(); applyTheme(); Scene.setTheme(S.theme === "light"); render(); },
+  citeFmt(d) { S.citeFmt = d.f; render(); },
+  removeLogo() { delete journal().logo; save(); render(); toast(t("saved")); },
+  deleteMember(d) { db.editorial_board = db.editorial_board.filter((m) => m.id !== d.id); save(); go("admin-board"); toast(t("deleted")); },
+  deleteNews(d) { db.news = db.news.filter((n) => n.id !== d.id); save(); go("admin-news"); toast(t("deleted")); },
+  bell() { S.bellOpen = !S.bellOpen; render(); },
+  markAll() { db.notifications.filter((n) => n.user_id === S.uid).forEach((n) => (n.read = true)); save(); render(); },
+  openNotif(d) { const n = by("notifications", d.id); n.read = true; S.bellOpen = false; save(); go(n.link); },
+  stepNext(d, el) { const f = el.closest("form"); if (validStep(f)) setStep(f, Number(f.dataset.cur) + 1); },
+  stepPrev(d, el) { const f = el.closest("form"); setStep(f, Number(f.dataset.cur) - 1); },
+  setLang(d) { S.lang = d.l; save(); render(); },
+  scrollTo(d) { document.getElementById(d.target)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); },
+  reset() { db = clone(SEED); S.uid = null; save(); go("home"); toast(t("saved")); },
+  logout() { S.uid = null; save(); go("home"); },
+  demoLogin(d) { const p = db.profiles.find((x) => x.email === d.email); if (p) loginAs(p.id); },
+  pdf(d) { const a = by("articles", d.id); if (a) { a.downloads++; save(); render(); } toast(t("fileNote")); },
+  file() { toast(t("fileNote")); },
+  copy(d) { try { navigator.clipboard.writeText(d.text).then(() => toast(t("copied")), () => {}); } catch (e) {} },
+  searchKw(d) { S.q = d.q; go("search"); },
+  addAuthor() { const box = document.getElementById("authors"); box.insertAdjacentHTML("beforeend", authorRow({}, box.children.length)); },
+  removeAuthor(d, el) { const box = document.getElementById("authors"); if (box.children.length > 1) el.closest(".author-row").remove(); },
+  withdraw(d) { const s = by("submissions", d.id); setStatus(s, "withdrawn"); save(); render(); toast(t("saved")); },
+  invite(d) { const r = by("review_assignments", d.id); r.status = d.ok === "1" ? "accepted" : "declined"; save(); render(); },
+  cancelReview(d) { by("review_assignments", d.id).status = "cancelled"; save(); render(); },
+  filter(d) { S.filter = d.f || null; render(); },
+  statGo(d) { if (d.i === "3") return go("admin-articles"); if (d.i === "4") return go(me().role === "admin" ? "admin-users" : "admin"); S.filter = d.f || null; go("admin-submissions"); },
+  toggleIssue(d) {
+    const i = by("issues", d.id);
+    const pub = i.status !== "published";
+    i.status = pub ? "published" : "draft";
+    if (pub && !i.published_at) i.published_at = now();
+    db.articles.filter((a) => a.issue_id === i.id).forEach((a) => {
+      if (pub && a.status === "scheduled") { a.status = "published"; a.published_at = now(); }
+      if (!pub) a.status = "scheduled";
+    });
+    save(); render(); toast(t("saved"));
+  },
+  issueArticles(d) { S.issueFilter = d.id || null; go("admin-articles"); },
+};
+const FORMS = {
+  news(fd, form) {
+    const row = { date: String(fd.get("date")), pinned: fd.get("pinned") === "on", title: i18nFrom(fd, "title"), body: i18nFrom(fd, "body") };
+    if (form.dataset.id) Object.assign(by("news", form.dataset.id), row); else db.news.push({ id: newId(), ...row });
+    save(); go("admin-news"); toast(t("saved"));
+  },
+  async settings(fd) {
+    const j = journal();
+    try { const logo = await readFile(fd.get("logo")); if (logo) j.logo = logo; } catch (e) { return toast(t("logoHint")); }
+    Object.assign(j, { title: i18nFrom(fd, "title"), description: i18nFrom(fd, "description"), issn_online: String(fd.get("issn_online") || ""), publisher: String(fd.get("publisher") || ""), contact_email: String(fd.get("contact_email") || ""),
+      indexes: String(fd.get("indexes") || "").split(",").map((x) => x.trim()).filter(Boolean), cfp_deadline: String(fd.get("cfp_deadline") || ""), cfp_text: i18nFrom(fd, "cfp_text") });
+    save(); render(); toast(t("saved"));
+  },
+  async member(fd, form) {
+    let photo = null;
+    try { photo = await readFile(fd.get("photo"), 400 * 1024); } catch (e) { return toast(t("logoHint")); }
+    const row = { full_name: i18nFrom(fd, "full_name"), position: i18nFrom(fd, "position"), affiliation: i18nFrom(fd, "affiliation"), position_type: fd.get("position_type"), sort_order: Number(fd.get("sort_order") || 10) };
+    if (photo) row.photo_url = photo;
+    if (form.dataset.id) Object.assign(by("editorial_board", form.dataset.id), row);
+    else db.editorial_board.push({ id: newId(), journal_id: journal().id, email: null, orcid: null, photo_url: null, ...row });
+    save(); go("admin-board"); toast(t("saved"));
+  },
+  search(fd) { S.q = String(fd.get("q") || ""); render(); },
+  userSearch(fd) { S.userQ = String(fd.get("q") || ""); render(); },
+  login(fd) {
+    const p = db.profiles.find((x) => x.email.toLowerCase() === String(fd.get("email")).toLowerCase());
+    if (!p) { const e = document.getElementById("autherr"); e.textContent = t("auth.invalid"); e.classList.remove("hidden"); return; }
+    loginAs(p.id);
+  },
+  register(fd) {
+    const email = String(fd.get("email")).trim();
+    if (db.profiles.some((x) => x.email.toLowerCase() === email.toLowerCase())) { const e = document.getElementById("autherr"); e.textContent = "User already registered"; e.classList.remove("hidden"); return; }
+    const p = { id: newId(), email, full_name: String(fd.get("full_name")), affiliation: String(fd.get("affiliation") || ""), orcid: null, role: "user", is_reviewer: false, preferred_locale: S.lang, created_at: now() };
+    db.profiles.push(p); loginAs(p.id);
+  },
+  submit(fd, form) {
+    if (!form.querySelector("[name=agree]").checked) { form.querySelector("[name=agree]").reportValidity(); return; }
+    const id = newId();
+    const file = fd.get("file");
+    const s = { id, journal_id: journal().id, section_id: fd.get("section_id"), submitter_id: S.uid, editor_id: null, status: "draft",
+      title: String(fd.get("title")).trim(), abstract: String(fd.get("abstract")).trim(),
+      keywords: String(fd.get("keywords")).split(",").map((k) => k.trim()).filter(Boolean), language: fd.get("language"),
+      references: String(fd.get("references") || ""), cover_letter: String(fd.get("cover_letter") || ""), decision_note: null,
+      submitted_at: null, created_at: now(), updated_at: now() };
+    db.submissions.push(s);
+    db.submission_events.push({ id: Date.now() - 1, submission_id: id, actor_id: S.uid, from_status: null, to_status: "draft", note: null, created_at: now() });
+    form.querySelectorAll(".author-row").forEach((row, i) => {
+      const v = (n) => row.querySelector(`[name=${n}]`).value.trim();
+      if (!v("a_name")) return;
+      db.submission_authors.push({ id: newId() + i, submission_id: id, full_name: v("a_name"), email: v("a_email") || null, affiliation: v("a_aff") || null, orcid: v("a_orcid") || null, is_corresponding: row.querySelector("[name=corr]").checked, sort_order: i });
+    });
+    db.submission_files.push({ id: newId(), submission_id: id, uploaded_by: S.uid, kind: "manuscript", storage_path: `${id}/${file?.name}`, file_name: file?.name || "manuscript", version: 1, created_at: now() });
+    setStatus(s, "submitted");
+    save(); go("mysub-" + id); toast(t("submitted"));
+  },
+  revision(fd, form) {
+    const s = by("submissions", form.dataset.id);
+    const v = Math.max(1, ...db.submission_files.filter((f) => f.submission_id === s.id).map((f) => f.version)) + 1;
+    const file = fd.get("file");
+    db.submission_files.push({ id: newId(), submission_id: s.id, uploaded_by: S.uid, kind: "revision", storage_path: "", file_name: file?.name || "revision", version: v, created_at: now() });
+    setStatus(s, "submitted"); save(); render(); toast(t("saved"));
+  },
+  review(fd, form) {
+    const r = by("review_assignments", form.dataset.id);
+    notify(staffIds(), "review", by("submissions", r.submission_id), "admin-sub-" + r.submission_id);
+    Object.assign(r, { status: "completed", recommendation: fd.get("recommendation"), comments_to_author: String(fd.get("comments_to_author")), comments_to_editor: String(fd.get("comments_to_editor") || ""), completed_at: now() });
+    save(); render();
+  },
+  decision(fd, form) { const s = by("submissions", form.dataset.id); s.editor_id = S.uid; setStatus(s, String(fd.get("status")), String(fd.get("note") || "")); save(); render(); toast(t("saved")); },
+  assign(fd, form) {
+    const s = by("submissions", form.dataset.id);
+    const rid = newId();
+    db.review_assignments.push({ id: rid, submission_id: s.id, reviewer_id: fd.get("reviewer_id"), round: Number(fd.get("round") || 1), status: "invited", recommendation: null, comments_to_author: null, comments_to_editor: null, due_at: fd.get("due_at") ? new Date(String(fd.get("due_at"))).toISOString() : null, completed_at: null, created_at: now() });
+    notify(fd.get("reviewer_id"), "invite", s, "review-" + rid);
+    if (["submitted", "desk_review"].includes(s.status)) setStatus(s, "under_review");
+    save(); render(); toast(t("saved"));
+  },
+  publish(fd, form) {
+    const s = by("submissions", form.dataset.id);
+    const issue = by("issues", fd.get("issue_id"));
+    const live = issue.status === "published";
+    const authors = db.submission_authors.filter((a) => a.submission_id === s.id).sort((a, b) => a.sort_order - b.sort_order).map((a) => ({ name: a.full_name, affiliation: a.affiliation || undefined, orcid: a.orcid || undefined }));
+    const num = (k) => (fd.get(k) ? Number(fd.get(k)) : null);
+    const a = { id: newId(), submission_id: s.id, journal_id: s.journal_id, issue_id: issue.id, section_id: s.section_id, title: s.title, title_i18n: {}, abstract: s.abstract, abstract_i18n: {},
+      keywords: s.keywords, language: s.language, authors, references: s.references, first_page: num("first_page"), last_page: num("last_page"), doi: String(fd.get("doi") || "") || null,
+      pdf_path: fd.get("pdf")?.name ? "demo/" + fd.get("pdf").name : null, license: "CC BY 4.0", status: live ? "published" : "scheduled", published_at: live ? now() : null, sort_order: 99, views: 0, downloads: 0, created_at: now() };
+    db.articles.push(a);
+    setStatus(s, "published");
+    save(); go("admin-article-" + a.id); toast(t("saved"));
+  },
+  volume(fd) { db.volumes.push({ id: newId(), journal_id: journal().id, number: Number(fd.get("number")), year: Number(fd.get("year")) }); save(); render(); toast(t("saved")); },
+  issue(fd) { db.issues.push({ id: newId(), volume_id: fd.get("volume_id"), number: Number(fd.get("number")), is_special: fd.get("is_special") === "on", status: "draft", published_at: null, title: i18nFrom(fd, "title"), description: {}, cover_url: null, created_at: now() }); save(); render(); toast(t("saved")); },
+  article(fd, form) {
+    const a = by("articles", form.dataset.id);
+    const num = (k) => (fd.get(k) ? Number(fd.get(k)) : null);
+    Object.assign(a, { title: String(fd.get("title")), title_i18n: i18nFrom(fd, "title"), abstract: String(fd.get("abstract")), abstract_i18n: i18nFrom(fd, "abstract"),
+      keywords: String(fd.get("keywords")).split(",").map((k) => k.trim()).filter(Boolean), issue_id: fd.get("issue_id"), first_page: num("first_page"), last_page: num("last_page"),
+      doi: String(fd.get("doi") || "") || null, references: String(fd.get("references") || "") });
+    save(); render(); toast(t("saved"));
+  },
+  role(fd, form) { const u = by("profiles", form.dataset.id); if (u.id !== S.uid) u.role = fd.get("role"); u.is_reviewer = fd.get("is_reviewer") === "on"; save(); render(); toast(t("saved")); },
+  page(fd, form) {
+    const row = { slug: String(fd.get("slug")).toLowerCase().replace(/[^a-z0-9-]+/g, "-"), title: i18nFrom(fd, "title"), body: i18nFrom(fd, "body"), is_published: fd.get("is_published") === "on", show_in_menu: fd.get("show_in_menu") === "on", sort_order: Number(fd.get("sort_order") || 0) };
+    if (form.dataset.id) Object.assign(by("pages", form.dataset.id), row); else db.pages.push({ id: newId(), ...row });
+    save(); go("admin-pages"); toast(t("saved"));
+  },
+};
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-act]");
+  if (S.bellOpen && !e.target.closest("[data-bell]")) { S.bellOpen = false; render(); return; }
+  if (!el) return;
+  e.preventDefault();
+  ACT[el.dataset.act]?.(el.dataset, el);
+});
+document.addEventListener("submit", (e) => {
+  const form = e.target.closest("[data-form]");
+  if (!form) return;
+  e.preventDefault();
+  FORMS[form.dataset.form]?.(new FormData(form), form);
+});
+document.addEventListener("change", (e) => {
+  if (e.target.dataset.change === "lang") { S.lang = e.target.value; save(); render(); }
+  if (e.target.dataset.change === "fileName") { const n = document.getElementById("file-name"); if (n) n.textContent = e.target.files[0]?.name || t("submit.fileHint"); }
+});
+applyTheme();
+/*__SCENE__*/
+Scene.setTheme(S.theme === "light");
+
+render();
+</script>
+</body>
+</html>

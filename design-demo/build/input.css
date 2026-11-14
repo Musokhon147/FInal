@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+  @layer base {
+    :root { --s50: 5 11 34; --s100: 12 23 54; --s200: 26 40 80; --s300: 42 58 104; --s400: 100 117 160; --s500: 147 161 196; --s600: 178 189 216; --s700: 205 213 232; --s800: 229 234 244; --s900: 246 242 231; --b50: 13 52 67; --b100: 18 70 87; --b600: 60 200 187; --b700: 121 223 213; --b900: 246 242 231; --acc: 232 177 58; --ink: 5 11 34; color-scheme: dark; }
+    html.light { --s50: 243 245 250; --s100: 255 255 255; --s200: 219 225 238; --s300: 195 204 224; --s400: 127 138 166; --s500: 83 94 124; --s600: 60 71 102; --s700: 42 52 83; --s800: 27 36 66; --s900: 10 29 92; --b50: 225 243 241; --b100: 198 233 229; --b600: 11 125 115; --b700: 8 101 93; --b900: 10 29 92; --acc: 154 106 0; --ink: 255 255 255; color-scheme: light; }
+    html { background: rgb(var(--s50)); transition: background .4s ease; }
+    body { @apply text-slate-800 antialiased font-sans; background: transparent; }
+    h1, h2, h3 { @apply font-serif text-slate-900 font-normal; letter-spacing: -0.01em; }
+    ::selection { background: #3cc8bb; color: #050b22; }
+    :focus-visible { outline: 2px solid #e8b13a; outline-offset: 2px; border-radius: 4px; }
+  }
+  @layer components {
+    .prose-content p { @apply mb-4 leading-relaxed text-slate-700; }
+    .prose-content h2 { @apply mt-8 mb-3 text-xl; }
+    .prose-content ul { @apply mb-4 list-disc pl-6 text-slate-700 space-y-1; }
+    .input { @apply w-full rounded-lg border border-slate-300 bg-slate-100/70 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30; }
+    .input option { background: rgb(var(--s100)); }
+    .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+    .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 cursor-pointer; }
+    .btn-primary { @apply btn bg-brand-600 text-ink hover:bg-brand-700 shadow-[0_0_24px_-6px_rgba(60,200,187,0.7)]; }
+    .btn-secondary { @apply btn border border-slate-300 bg-slate-100/60 text-slate-800 hover:border-brand-600 hover:text-slate-900; }
+    .btn-gold { @apply btn bg-accent text-ink hover:brightness-110 shadow-[0_0_28px_-6px_rgba(232,177,58,0.75)]; }
+    .card { @apply rounded-2xl border border-slate-200/80 bg-slate-100/55 p-6 backdrop-blur-md; }
+    .tbl { @apply w-full text-left text-sm; }
+    .tbl th { @apply border-b border-slate-200 px-3 py-2 font-medium text-slate-500; }
+    .tbl td { @apply border-b border-slate-200/60 px-3 py-3 align-top; }
+    .navlink { @apply text-slate-600 transition hover:text-slate-900; }
+    .reveal { opacity: 0; transform: translateY(14px); animation: rise .9s cubic-bezier(.2,.7,.2,1) forwards; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .reveal { animation: none; opacity: 1; transform: none; } }
+  }
+@layer components {
+  .page-enter { animation: pageIn .45s cubic-bezier(.2,.7,.2,1); }
+  @keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .step { opacity: .35; transform: translateY(10px); transition: opacity .7s ease, transform .7s ease; }
+  .step.is-on { opacity: 1; transform: none; }
+  .step .step-num { transition: color .7s ease, text-shadow .7s ease; }
+  .step.is-on .step-num { text-shadow: 0 0 22px rgba(232,177,58,.6); }
+  @media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } .step { opacity: 1; transform: none; } }
+}
+
+@layer components {
+  .badge { @apply inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1; }
+  .b-draft { background: rgb(var(--s200)); color: rgb(var(--s700)); --tw-ring-color: transparent; }
+  .b-withdrawn { background: rgb(var(--s200)); color: rgb(var(--s500)); --tw-ring-color: transparent; }
+  .b-published { background: rgb(var(--b600)); color: rgb(var(--ink)); --tw-ring-color: transparent; }
+  .b-submitted { background: rgb(56 189 248 / .14); color: #7dd3fc; --tw-ring-color: rgb(56 189 248 / .3); }
+  .b-desk_review { background: rgb(129 140 248 / .14); color: #a5b4fc; --tw-ring-color: rgb(129 140 248 / .3); }
+  .b-under_review { background: rgb(251 191 36 / .14); color: #fcd34d; --tw-ring-color: rgb(251 191 36 / .3); }
+  .b-revision_required { background: rgb(251 146 60 / .14); color: #fdba74; --tw-ring-color: rgb(251 146 60 / .3); }
+  .b-accepted { background: rgb(52 211 153 / .14); color: #6ee7b7; --tw-ring-color: rgb(52 211 153 / .3); }
+  .b-rejected { background: rgb(248 113 113 / .14); color: #fca5a5; --tw-ring-color: rgb(248 113 113 / .3); }
+  .light .b-submitted { color: #0369a1; } .light .b-desk_review { color: #4338ca; } .light .b-under_review { color: #92400e; }
+  .light .b-revision_required { color: #9a3412; } .light .b-accepted { color: #047857; } .light .b-rejected { color: #b91c1c; }
+  .light .text-red-400 { color: #b91c1c; }
+  .tilt { transform-style: preserve-3d; transition: transform .25s ease, box-shadow .25s ease; will-change: transform; }
+  .read-progress { position: fixed; top: 0; left: 0; height: 3px; z-index: 60; background: linear-gradient(90deg, rgb(var(--b600)), rgb(var(--acc))); transform-origin: left; transform: scaleX(0); }
+  .paper { background: #fffdf7; color: #1c2238; }
+}
+@layer components {
+  .chart-bar { transform-box: fill-box; transform-origin: bottom; animation: growY .8s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes growY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .chart-hbar { transform-origin: left; animation: growX .9s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .step-fill { width: 0; transition: width .5s ease; }
+  .step-ind.is-current .step-fill { width: 100%; opacity: .55; }
+  .step-ind.is-done .step-fill { width: 100%; }
+  .step-ind.is-current > span:last-child { color: rgb(var(--s900)); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .chart-bar, .chart-hbar { animation: none; } }
+}

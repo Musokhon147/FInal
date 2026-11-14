@@ -1,0 +1,244 @@
+/* ---------------------------------------------------------------- 3D scene
+   Particles morph into a different shape per page:
+     home      → eight-pointed Samarkand star (with constellation lines)
+     articles  → an open book          archive/issues → a stack of issues
+     board     → a globe               everything else → a slow starfield
+   The cursor pushes particles aside; they flow back when it leaves. */
+const Scene = (() => {
+  const canvas = document.getElementById("scene");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const noop = { setMode() {}, setTheme() {} };
+  if (!window.THREE || !canvas) return noop;
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" }); } catch (e) { return noop; }
+  const small = innerWidth < 640 || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, small ? 1.5 : 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+  camera.position.set(0, 0, 9);
+
+  const N = small ? 4500 : 9000;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const PAL = {
+    dark: { gold: "#e8b13a", turq: "#3cc8bb", ivory: "#f6f2e7", lapis: "#5a7ee0" },
+    light: { gold: "#b07d10", turq: "#0f8f84", ivory: "#1a2a5c", lapis: "#3557b8" },
+  };
+  const role = new Uint8Array(N); // 0 gold, 1 turq, 2 ivory, 3 lapis
+  const sizes = new Float32Array(N), seeds = new Float32Array(N);
+
+  /* ---------- shape builders: each fills a Float32Array of N*3 */
+  const R = 2.6;
+  const poly = (n, f) => Array.from({ length: n }, (_, k) => f(k));
+  const starPoly = poly(16, (k) => { const a = (k * Math.PI) / 8 + Math.PI / 8, r = k % 2 === 0 ? R : R * 0.7654; return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const octa = poly(8, (k) => { const a = (k * Math.PI) / 4; return [Math.cos(a) * R * 0.52, Math.sin(a) * R * 0.52]; });
+  const rosette = poly(16, (k) => { const a = (k * Math.PI) / 8, r = k % 2 === 0 ? R * 0.34 : R * 0.22; return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const onPoly = (pl, t) => { const n = pl.length, f = t * n, i = Math.floor(f) % n, u = f - Math.floor(f), a = pl[i], b = pl[(i + 1) % n]; return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; };
+
+  const star = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = Math.random(); let x, y, z;
+    if (r < 0.42) { [x, y] = onPoly(starPoly, Math.random()); z = (Math.random() < 0.5 ? -1 : 1) * 0.18 + rand(-0.04, 0.04); role[i] = 0; sizes[i] = rand(1.2, 2.4); }
+    else if (r < 0.6) {
+      const sq = Math.random() < 0.5 ? 0 : Math.PI / 4, tt = Math.random() * 4, side = Math.floor(tt), u = tt - side, h = R * 0.62;
+      const c = [[-h, -h], [h, -h], [h, h], [-h, h]], a = c[side], b = c[(side + 1) % 4];
+      const px = a[0] + (b[0] - a[0]) * u, py = a[1] + (b[1] - a[1]) * u;
+      x = px * Math.cos(sq) - py * Math.sin(sq); y = px * Math.sin(sq) + py * Math.cos(sq); z = rand(-0.06, 0.06); role[i] = 1; sizes[i] = rand(0.8, 1.6);
+    }
+    else if (r < 0.72) { [x, y] = onPoly(octa, Math.random()); z = rand(-0.1, 0.1); role[i] = 1; sizes[i] = rand(1, 2); }
+    else if (r < 0.8) { [x, y] = onPoly(rosette, Math.random()); z = rand(-0.05, 0.05); role[i] = 0; sizes[i] = rand(1, 2.2); }
+    else if (r < 0.88) { const a = Math.random() * Math.PI * 2, rr = R * 1.22; x = Math.cos(a) * rr; y = Math.sin(a) * rr; z = rand(-0.05, 0.05); role[i] = 2; sizes[i] = rand(0.6, 1.2); }
+    else { const a = Math.random() * Math.PI * 2, rr = R * rand(0.2, 1.9); x = Math.cos(a) * rr; y = Math.sin(a) * rr; z = rand(-0.6, 0.6); role[i] = Math.random() < 0.5 ? 3 : 2; sizes[i] = rand(0.4, 1.1); }
+    star.set([x, y, z], i * 3); seeds[i] = Math.random() * 100;
+  }
+
+  // Open book: two pages curving up from the spine, with lines of "text".
+  const book = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const side = i % 2 ? 1 : -1, r = Math.random();
+    let u = Math.random(), v = rand(-1, 1);
+    if (r < 0.55) v = Math.round(v * 11) / 11 + rand(-0.008, 0.008), u = rand(0.12, 0.92); // text lines
+    else if (r < 0.75) { const e = Math.floor(Math.random() * 3); if (e === 0) u = 1; else v = e === 1 ? -1 : 1; } // page edges
+    const x = side * u * 2.5, y = v * 1.7, z = Math.sin(u * Math.PI * 0.9) * 0.55 - u * 0.25 + rand(-0.02, 0.02);
+    book.set([x, y, z], i * 3);
+  }
+
+  // Stack of six issues, fanned slightly.
+  const stack = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const k = i % 6, w = 1.7, h = 2.3, r = Math.random();
+    let x = rand(-w, w), y = rand(-h, h);
+    if (r < 0.6) { const e = Math.floor(Math.random() * 4); if (e < 2) x = e ? w : -w; else y = e === 2 ? h : -h; }
+    const ang = (k - 2.5) * 0.07, ox = (k - 2.5) * 0.28, oz = (k - 2.5) * 0.32;
+    stack.set([x * Math.cos(ang) - y * Math.sin(ang) + ox, x * Math.sin(ang) + y * Math.cos(ang) - (k - 2.5) * 0.12, oz + rand(-0.02, 0.02)], i * 3);
+  }
+
+  // Globe with latitude/longitude lines.
+  const globe = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = Math.random(), G = 2.4; let lat, lon;
+    if (r < 0.35) { lat = (Math.round(rand(-1, 1) * 4) / 4) * (Math.PI / 2) * 0.95; lon = rand(0, Math.PI * 2); }
+    else if (r < 0.7) { lon = (Math.round(rand(0, 12)) / 12) * Math.PI * 2; lat = rand(-Math.PI / 2, Math.PI / 2); }
+    else { lat = Math.asin(rand(-1, 1)); lon = rand(0, Math.PI * 2); }
+    globe.set([G * Math.cos(lat) * Math.cos(lon), G * Math.sin(lat), G * Math.cos(lat) * Math.sin(lon)], i * 3);
+  }
+
+  const field = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) field.set([rand(-11, 11), rand(-7, 7), rand(-9, 2)], i * 3);
+  const SHAPES = { star, book, stack, globe, field };
+
+  /* ---------- particles */
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2, b = Math.acos(rand(-1, 1)), rr = rand(14, 22);
+    pos.set([rr * Math.sin(b) * Math.cos(a), rr * Math.sin(b) * Math.sin(a), rr * Math.cos(b) - 6], i * 3);
+  }
+  const colors = new Float32Array(N * 3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+  const mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uPR: { value: renderer.getPixelRatio() }, uOpacity: { value: 1 } },
+    vertexShader: `attribute float size; attribute vec3 color; varying vec3 vColor; uniform float uPR;
+      void main(){ vColor = color; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = size * uPR * (26.0 / -mv.z); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vColor; uniform float uOpacity;
+      void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); a *= a; gl_FragColor = vec4(vColor, a * uOpacity); }`,
+  });
+  const group = new THREE.Group();
+  group.add(new THREE.Points(geo, mat));
+  scene.add(group);
+
+  /* ---------- constellation lines between neighbouring star particles */
+  const pairs = [];
+  {
+    const cell = 0.32, grid = new Map();
+    for (let i = 0; i < N; i++) {
+      if (role[i] > 1) continue;
+      const key = Math.floor(star[i * 3] / cell) + "," + Math.floor(star[i * 3 + 1] / cell);
+      (grid.get(key) || grid.set(key, []).get(key)).push(i);
+    }
+    const maxPairs = small ? 350 : 800;
+    for (const list of grid.values()) {
+      for (let a = 0; a < list.length && pairs.length < maxPairs; a += 6) {
+        const i = list[a], j = list[(a + 3) % list.length];
+        if (i !== j && Math.random() < 0.5) pairs.push(i, j);
+      }
+    }
+  }
+  const linePos = new Float32Array(pairs.length * 3);
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute("position", new THREE.BufferAttribute(linePos, 3));
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x3cc8bb, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  group.add(new THREE.LineSegments(lineGeo, lineMat));
+
+  /* ---------- theme */
+  let light = false;
+  function setTheme(isLight) {
+    light = isLight;
+    const p = PAL[isLight ? "light" : "dark"];
+    const cs = [p.gold, p.turq, p.ivory, p.lapis].map((h) => new THREE.Color(h));
+    for (let i = 0; i < N; i++) { const c = cs[role[i]]; colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b; }
+    geo.attributes.color.needsUpdate = true;
+    mat.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
+    lineMat.blending = mat.blending; lineMat.color.set(p.turq);
+    mat.needsUpdate = lineMat.needsUpdate = true;
+  }
+  setTheme(false);
+
+  /* ---------- layout, input, modes */
+  let mode = "star", target = star;
+  const mouse = { x: 0, y: 0, sx: 0, sy: 0, active: false, ndc: new THREE.Vector2(), local: new THREE.Vector3() };
+  window.addEventListener("pointermove", (e) => {
+    mouse.x = e.clientX / innerWidth - 0.5; mouse.y = e.clientY / innerHeight - 0.5;
+    mouse.ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); mouse.active = true;
+  });
+  document.addEventListener("pointerleave", () => (mouse.active = false));
+  const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
+
+  let placement = {};
+  function layoutGroup() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    const wide = w >= 1024;
+    placement = {
+      star: wide ? { x: 3.3, y: 0.1, s: 1, o: 1 } : { x: 0, y: w < 640 ? 2.6 : 1.8, s: w < 640 ? 0.62 : 0.8, o: 0.42 },
+      side: wide ? { x: 3.7, y: -0.3, s: 0.85, o: 0.34 } : { x: 0, y: 2.8, s: 0.6, o: 0.18 },
+      field: { x: 0, y: 0, s: 1, o: 0.38 },
+    };
+  }
+  layoutGroup();
+  window.addEventListener("resize", layoutGroup);
+
+  function setMode(m) {
+    if (!SHAPES[m] || m === mode) return;
+    mode = m; target = SHAPES[m];
+    if (reduce) { pos.set(target); geo.attributes.position.needsUpdate = true; }
+  }
+
+  /* ---------- loop */
+  const clock = new THREE.Clock();
+  let scrollY = 0, running = true, T = 0;
+  window.addEventListener("scroll", () => (scrollY = window.scrollY), { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    running = !document.hidden;
+    if (running && !reduce) { clock.getDelta(); requestAnimationFrame(frame); }
+  });
+  const inv = new THREE.Matrix4();
+  function frame() {
+    if (!running) return;
+    const dt = Math.min(clock.getDelta(), 0.1);
+    T += dt; const t = T;
+    const isStar = mode === "star";
+    // time-based easing: same speed at 30 fps or 144 fps
+    const k = 1 - Math.exp(-dt * (isStar ? Math.min(0.9 + t * 0.6, 3.6) : 2.1));
+
+    // pointer position in the group's local space (for the push-away effect)
+    let mx = 1e9, my = 1e9;
+    if (mouse.active && mode !== "field") {
+      ray.setFromCamera(mouse.ndc, camera);
+      if (ray.ray.intersectPlane(plane, hit)) {
+        inv.copy(group.matrixWorld).invert();
+        mouse.local.copy(hit).applyMatrix4(inv); mx = mouse.local.x; my = mouse.local.y;
+      }
+    }
+    const RAD = 1.1, RAD2 = RAD * RAD;
+    const wob = isStar ? 0.025 : mode === "field" ? 0.35 : 0.04;
+    for (let i = 0; i < N; i++) {
+      const j = i * 3, sd = seeds[i];
+      let tx = target[j] + Math.sin(t * 0.6 + sd) * wob;
+      let ty = target[j + 1] + Math.cos(t * 0.5 + sd * 1.3) * wob;
+      const tz = target[j + 2] + Math.sin(t * 0.4 + sd * 0.7) * wob;
+      const dx = pos[j] - mx, dy = pos[j + 1] - my, d2 = dx * dx + dy * dy;
+      if (d2 < RAD2) { const d = Math.sqrt(d2) + 1e-4, f = (RAD - d) * 1.6; tx += (dx / d) * f; ty += (dy / d) * f; }
+      pos[j] += (tx - pos[j]) * k; pos[j + 1] += (ty - pos[j + 1]) * k; pos[j + 2] += (tz - pos[j + 2]) * k;
+    }
+    geo.attributes.position.needsUpdate = true;
+    for (let p = 0; p < pairs.length; p++) { const s = pairs[p] * 3; linePos[p * 3] = pos[s]; linePos[p * 3 + 1] = pos[s + 1]; linePos[p * 3 + 2] = pos[s + 2]; }
+    lineGeo.attributes.position.needsUpdate = true;
+
+    mouse.sx += (mouse.x - mouse.sx) * 0.05; mouse.sy += (mouse.y - mouse.sy) * 0.05;
+    const pl = isStar ? placement.star : mode === "field" ? placement.field : placement.side;
+    const fade = isStar ? Math.min(scrollY / innerHeight, 1) : 0;
+    group.position.x += (pl.x - group.position.x) * 0.05;
+    group.position.y += (pl.y + fade * 1.6 - group.position.y) * 0.05;
+    group.scale.setScalar(group.scale.x + (pl.s * (1 - fade * 0.15) - group.scale.x) * 0.05);
+    const spin = mode === "globe" ? t * 0.15 : 0;
+    group.rotation.z = isStar ? t * 0.05 : 0;
+    group.rotation.y = mouse.sx * 0.9 + Math.sin(t * 0.3) * 0.12 + spin + (mode === "book" ? -0.35 : mode === "stack" ? -0.5 : 0);
+    group.rotation.x = -mouse.sy * 0.7 + Math.cos(t * 0.25) * 0.08 + (mode === "book" ? -0.55 : 0);
+    const og = pl.o * (1 - fade * 0.55) * (light ? 0.85 : 1);
+    mat.uniforms.uOpacity.value += (og - mat.uniforms.uOpacity.value) * 0.05;
+    const lineGoal = isStar ? (light ? 0.22 : 0.16) * (1 - fade) * Math.min(t / 3, 1) : 0;
+    lineMat.opacity += (lineGoal - lineMat.opacity) * 0.05;
+    renderer.render(scene, camera);
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  if (reduce) { pos.set(star); geo.attributes.position.needsUpdate = true; group.position.set(placement.star.x, placement.star.y, 0); }
+  frame();
+  return {
+    setMode: (m) => { setMode(m); if (reduce) frame(); },
+    setTheme: (l) => { setTheme(l); if (reduce) frame(); },
+  };
+})();

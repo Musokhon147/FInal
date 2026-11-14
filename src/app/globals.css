@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef4fb;
+  --color-brand-100: #d6e4f5;
+  --color-brand-600: #1f4e8c;
+  --color-brand-700: #183e70;
+  --color-brand-900: #0d2341;
+  --color-accent: #b8862b;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+
+@layer base {
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
+
+h1, h2, h3 {
+  @apply font-serif text-brand-900;
+}
+}
+
+@layer components {
+  .prose-content p { @apply mb-3 leading-relaxed; }
+  .prose-content h2 { @apply mt-6 mb-2 text-xl; }
+  .prose-content h3 { @apply mt-4 mb-2 text-lg; }
+  .prose-content ul { @apply mb-3 list-disc pl-6; }
+  .prose-content ol { @apply mb-3 list-decimal pl-6; }
+  .prose-content a { @apply text-brand-600 underline; }
+
+  .input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
+  }
+  .label { @apply mb-1 block text-sm font-medium text-slate-700; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100; }
+  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 bg-red-600 text-white hover:bg-red-700; }
+  .card { @apply rounded-lg border border-slate-200 bg-white p-5 shadow-sm; }
+  .table { @apply w-full text-left text-sm; }
+  .table th { @apply border-b border-slate-200 px-3 py-2 font-medium text-slate-500; }
+  .table td { @apply border-b border-slate-100 px-3 py-2 align-top; }
+}
