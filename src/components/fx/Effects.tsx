@@ -13,9 +13,12 @@ export default function Effects() {
 
   useEffect(() => {
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.getElementById("page")?.classList.remove("page-enter");
-    void document.getElementById("page")?.offsetWidth;
-    document.getElementById("page")?.classList.add("page-enter");
+    if (typeof (document as { startViewTransition?: unknown }).startViewTransition !== "function") {
+      // older browsers: simple fade instead of the star wipe
+      document.getElementById("page")?.classList.remove("page-enter");
+      void document.getElementById("page")?.offsetWidth;
+      document.getElementById("page")?.classList.add("page-enter");
+    }
     window.scrollTo(0, 0);
 
     const io = "IntersectionObserver" in window

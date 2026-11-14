@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { ViewTransition } from "react";
 import { Link } from "@/i18n/navigation";
 import { tr, trExact, type I18nText } from "@/lib/i18n-field";
 import { pagesRange } from "@/lib/data";
@@ -21,7 +22,9 @@ export default async function ArticleList({ articles }: { articles: ListedArticl
           <li key={a.id} className="p-4">
             {a.sections && <p className="mb-1 text-xs font-medium text-accent">{tr(a.sections.title, locale)}</p>}
             <Link href={`/article/${a.id}`} className="text-lg font-semibold leading-snug text-slate-900 transition hover:text-brand-700">
-              {trExact(a.title_i18n, locale) || a.title}
+              <ViewTransition name={`title-${a.id.replace(/[^a-z0-9]/gi, "")}`} share="morph" default="none">
+                <span className="inline-block">{trExact(a.title_i18n, locale) || a.title}</span>
+              </ViewTransition>
             </Link>
             <p className="mt-1 text-sm text-slate-600">{a.authors.map((au) => au.name).join(", ")}</p>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">

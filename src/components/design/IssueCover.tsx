@@ -1,3 +1,5 @@
+import { ViewTransition } from "react";
+
 /** Generated tile-pattern cover for an issue, so the archive reads like a shelf. */
 export default function IssueCover({
   id, number, isSpecial, volumeLabel, topic, size = "md",
@@ -8,6 +10,7 @@ export default function IssueCover({
   const pid = "p" + id.replace(/[^a-z0-9]/gi, "");
   const big = size === "lg";
   return (
+    <ViewTransition name={`cover-${pid}`} share="morph" default="none">
     <div className="tilt relative aspect-[3/4] w-full overflow-hidden rounded-xl ring-1 ring-white/10" style={{ background: bg }}>
       {topic && <p className="absolute left-4 right-4 top-4 z-10 text-xs leading-snug text-[#cdd5e8]">{topic}</p>}
       <svg className="absolute inset-0 h-full w-full opacity-60" aria-hidden="true">
@@ -28,5 +31,6 @@ export default function IssueCover({
         <p className="mt-2 text-xs text-[#cdd5e8]">{volumeLabel}</p>
       </div>
     </div>
+    </ViewTransition>
   );
 }

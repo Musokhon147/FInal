@@ -180,3 +180,18 @@ html.light {
 html.theme-vt::view-transition-old(root) { animation: none; }
 html.theme-vt::view-transition-new(root) { animation: themeReveal 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
 @keyframes themeReveal { from { clip-path: circle(0 at var(--vt-x, 90%) var(--vt-y, 0%)); } to { clip-path: circle(150% at var(--vt-x, 90%) var(--vt-y, 0%)); } }
+
+/* ---------- page transitions (View Transitions API, via React <ViewTransition>) */
+::view-transition { pointer-events: none; }
+/* the new page opens through a growing eight-pointed star; the header stays put */
+::view-transition-old(.page-star) { animation: vtFadeOut 0.35s ease both; }
+::view-transition-new(.page-star) { animation: vtStar 0.7s cubic-bezier(0.65, 0, 0.35, 1) both; }
+@keyframes vtStar { from { clip-path: polygon(50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%, 50.00% 50.00%); } to { clip-path: polygon(50.00% -90.00%, 91.01% -49.00%, 148.99% -48.99%, 149.00% 8.99%, 190.00% 50.00%, 149.00% 91.01%, 148.99% 148.99%, 91.01% 149.00%, 50.00% 190.00%, 8.99% 149.00%, -48.99% 148.99%, -49.00% 91.01%, -90.00% 50.00%, -49.00% 8.99%, -48.99% -48.99%, 8.99% -49.00%); } }
+@keyframes vtFadeOut { to { opacity: 0; transform: scale(0.98); } }
+/* shared elements (covers, titles) morph with a soft blur mid-flight */
+::view-transition-group(.morph) { animation-duration: 0.55s; animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1); }
+::view-transition-image-pair(.morph) { animation: vtBlur 0.55s ease; }
+@keyframes vtBlur { 50% { filter: blur(3px); } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*), ::view-transition-new(*), ::view-transition-group(*), ::view-transition-image-pair(*) { animation: none !important; }
+}

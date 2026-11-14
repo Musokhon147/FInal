@@ -11,7 +11,7 @@ import Effects from "@/components/fx/Effects";
 import NavProgress from "@/components/fx/NavProgress";
 import ClickSparks from "@/components/fx/ClickSparks";
 import ShootingStars from "@/components/fx/ShootingStars";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import { THEME_SCRIPT } from "@/components/fx/ThemeToggle";
 import { getJournal } from "@/lib/data";
 import { tr } from "@/lib/i18n-field";
@@ -59,7 +59,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
               <div className="border-b border-accent/20 bg-accent/10 px-4 py-1.5 text-center text-xs text-accent print:hidden">{td("banner")}</div>
             )}
             <Header />
-            <main className="flex-1"><div id="page" className="mx-auto w-full max-w-7xl px-5 py-10">{children}</div></main>
+            <main className="flex-1"><ViewTransition name="page" default="page-star"><div id="page" className="mx-auto w-full max-w-7xl px-5 py-10">{children}</div></ViewTransition></main>
             <Footer />
           </div>
         </NextIntlClientProvider>

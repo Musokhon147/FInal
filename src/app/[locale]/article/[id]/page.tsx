@@ -10,6 +10,7 @@ import { formatDate, tr, trExact, type I18nText } from "@/lib/i18n-field";
 import { issueLabel } from "@/lib/issue-label";
 import type { Article } from "@/lib/types";
 import CiteBox from "@/components/fx/CiteBox";
+import { ViewTransition } from "react";
 import { alternates, SITE_URL } from "@/lib/site";
 
 type FullArticle = Article & {
@@ -133,8 +134,10 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
             {iss && <> / <Link href={`/issue/${iss.id}`} className="hover:text-slate-900">{issueLabel(t, iss)}</Link></>}
           </nav>
           {a.sections && <p className="mb-3 text-sm font-medium text-accent">{tr(a.sections.title, locale)}</p>}
-          <h1 className="text-3xl leading-tight sm:text-4xl">{a.title}</h1>
-          {localTitle && localTitle !== a.title && <p className="mt-3 text-xl text-slate-600">{localTitle}</p>}
+          <ViewTransition name={`title-${a.id.replace(/[^a-z0-9]/gi, "")}`} share="morph" default="none">
+            <h1 className="text-3xl leading-tight sm:text-4xl">{localTitle || a.title}</h1>
+          </ViewTransition>
+          {localTitle && localTitle !== a.title && <p className="mt-3 text-xl text-slate-600">{a.title}</p>}
 
           <ul className="mt-7 grid gap-4 sm:grid-cols-2">
             {a.authors.map((au, i) => (
