@@ -51,8 +51,18 @@ export default function SceneCanvas() {
       api.current?.setMode(modeRef.current);
     };
     pick();
-    const id = requestAnimationFrame(pick); // after the new page has rendered
-    return () => cancelAnimationFrame(id);
+    // sections can borrow a shape while they are on screen: <section data-scene-zone="split4">
+    let io: IntersectionObserver | undefined;
+    const zones = () => {
+      if (!("IntersectionObserver" in window)) return;
+      io = new IntersectionObserver((es) => es.forEach((e) => {
+        const z = (e.target as HTMLElement).dataset.sceneZone as SceneMode;
+        api.current?.setMode(e.isIntersecting ? z : modeRef.current);
+      }), { rootMargin: "-30% 0px -30% 0px" });
+      document.querySelectorAll("[data-scene-zone]").forEach((el) => io!.observe(el));
+    };
+    const id = requestAnimationFrame(() => { pick(); zones(); }); // after the new page has rendered
+    return () => { cancelAnimationFrame(id); io?.disconnect(); };
   }, [pathname]);
 
   return <canvas ref={ref} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-full w-full print:hidden" />;

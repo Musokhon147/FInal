@@ -390,6 +390,7 @@
     "explore": "Maqolalar xaritasi",
     "exploreText": "Har bir nuqta — maqola. Umumiy kalit so'zlarga ega maqolalar chiziq bilan bog'langan. Aylantiring, yaqinlashtiring va ochish uchun bosing.",
     "exploreLink": "Maqolalar xaritasini ochish",
-    "sharedKeywords": "Umumiy kalit so'zlar"
+    "sharedKeywords": "Umumiy kalit so'zlar",
+    "toTop": "Yuqoriga qaytish"
   }
 }

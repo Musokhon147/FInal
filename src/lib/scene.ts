@@ -5,7 +5,7 @@
  */
 import * as THREE from "three";
 
-export type SceneMode = "star" | "book" | "stack" | "globe" | "field" | `text:${string}` | `glyph:${string}`;
+export type SceneMode = "star" | "split4" | "book" | "stack" | "globe" | "field" | `text:${string}` | `glyph:${string}`;
 export type SceneApi = { setMode(m: SceneMode): void; setTheme(light: boolean): void; burst(): void; dispose(): void };
 
 export function createScene(canvas: HTMLCanvasElement): SceneApi {
@@ -87,7 +87,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
 
   const field = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) field.set([rand(-11, 11), rand(-7, 7), rand(-9, 2)], i * 3);
-  const SHAPES: Record<string, Float32Array> = { star, book, stack, globe, field };
+  // The star split into four small stars in a row: one per step of "how to publish".
+  const split4 = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const k = i % 4, sc = 0.42, a = (k - 1.5) * 0.35 + (k % 2 ? 0.2 : -0.2), c = Math.cos(a), sn = Math.sin(a);
+    const x = star[i * 3] * sc, y = star[i * 3 + 1] * sc;
+    split4.set([(k - 1.5) * 2.98 + x * c - y * sn, x * sn + y * c, star[i * 3 + 2] * sc], i * 3);
+  }
+  const SHAPES: Record<string, Float32Array> = { star, split4, book, stack, globe, field };
 
   /** Sample the pixels of rendered text and spread the particles over them. */
   function textShape(text: string, big: boolean): Float32Array | null {
@@ -204,6 +211,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       side: wide ? { x: 3.7, y: -0.3, s: 0.85, o: 0.34 } : { x: 0, y: 2.8, s: 0.6, o: 0.18 },
       field: { x: 0, y: 0, s: 1, o: 0.38 },
       text: wide ? { x: 2.6, y: 0.2, s: 1, o: 0.9 } : { x: 0, y: 2.2, s: 0.7, o: 0.5 },
+      split: wide ? { x: 0, y: 0.6, s: Math.min(1, w / 1440), o: 0.55 } : { x: 0, y: 0, s: 0.5, o: 0.3 },
     };
   }
   layoutGroup();
@@ -228,7 +236,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       if (shape) SHAPES[m] = shape;
     }
     if (!SHAPES[m]) return;
-    scatter(m === "star" ? 1.2 : 0.9);
+    scatter(m === "star" ? 1.2 : m === "split4" || mode === "split4" ? 0.45 : 0.9);
     mode = m; target = SHAPES[m];
     if (reduce) { pos.set(target); geo.attributes.position.needsUpdate = true; }
   }
@@ -285,15 +293,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
     lineGeo.attributes.position.needsUpdate = true;
 
     mouse.sx += (mouse.x - mouse.sx) * 0.05; mouse.sy += (mouse.y - mouse.sy) * 0.05;
-    const pl = isStar ? placement.star : mode === "field" ? placement.field : mode.startsWith("text:") ? placement.text : placement.side;
+    const isSplit = mode === "split4";
+    const pl = isStar ? placement.star : isSplit ? placement.split : mode === "field" ? placement.field : mode.startsWith("text:") ? placement.text : placement.side;
     const fade = isStar ? Math.min(scrollY / innerHeight, 1) : 0;
     group.position.x += (pl.x - group.position.x) * 0.05;
     group.position.y += (pl.y + fade * 1.6 - group.position.y) * 0.05;
     group.scale.setScalar(group.scale.x + (pl.s * (1 - fade * 0.15) - group.scale.x) * 0.05);
     const spin = mode === "globe" ? t * 0.15 : 0;
     group.rotation.z = isStar ? t * 0.05 : 0;
-    const scrollTurn = isStar ? 0 : Math.min(scrollY / 2500, 1) * 0.9; // inner pages turn slowly as you scroll
-    group.rotation.y = mouse.sx * 0.9 + Math.sin(t * 0.3) * 0.12 + spin + scrollTurn + (mode === "book" ? -0.35 : mode === "stack" ? -0.5 : 0);
+    const scrollTurn = isStar || isSplit ? 0 : Math.min(scrollY / 2500, 1) * 0.9; // inner pages turn slowly as you scroll
+    group.rotation.y = mouse.sx * (isSplit ? 0.25 : 0.9) + Math.sin(t * 0.3) * 0.12 + spin + scrollTurn + (mode === "book" ? -0.35 : mode === "stack" ? -0.5 : 0);
     group.rotation.x = -mouse.sy * 0.7 + Math.cos(t * 0.25) * 0.08 + (mode === "book" ? -0.55 : 0);
     const og = pl.o * (1 - fade * 0.55) * (light ? 0.85 : 1);
     mat.uniforms.uOpacity.value += (og - mat.uniforms.uOpacity.value) * 0.05;

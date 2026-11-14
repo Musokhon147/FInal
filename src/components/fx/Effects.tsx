@@ -42,15 +42,37 @@ export default function Effects() {
       : null;
     document.querySelectorAll(".step, [data-count], [data-reveal]").forEach((el) => (io ? io.observe(el) : el.classList.add("is-on", "is-in")));
 
-    const readBar = () => {
-      const bar = document.getElementById("readbar"), body = document.getElementById("article-body");
-      if (!bar || !body) return;
-      const r = body.getBoundingClientRect(), total = r.height - innerHeight * 0.6;
-      bar.style.transform = `scaleX(${Math.max(0, Math.min(1, -r.top / Math.max(total, 1)))})`;
+    // layers that move at their own speed while scrolling: data-parallax="0.2" (uses `translate`, so tilt/reveal transforms still work)
+    const layers = reduce ? [] : [...document.querySelectorAll<HTMLElement>("[data-parallax]")];
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const bar = document.getElementById("readbar"), body = document.getElementById("article-body");
+        if (bar && body) {
+          const r = body.getBoundingClientRect(), total = r.height - innerHeight * 0.6;
+          const p = Math.max(0, Math.min(1, -r.top / Math.max(total, 1)));
+          bar.style.transform = `scaleX(${p})`;
+          const ring = document.getElementById("readring");
+          if (ring) {
+            ring.style.setProperty("--p", String(p));
+            ring.classList.toggle("on", r.top < -200);
+            const num = ring.querySelector("[data-pct]");
+            if (num) num.textContent = String(Math.round(p * 100));
+          }
+        }
+        for (const el of layers) {
+          const r = el.getBoundingClientRect();
+          if (r.bottom < -200 || r.top > innerHeight + 200) continue;
+          el.style.translate = `0 ${((r.top + r.height / 2 - innerHeight / 2) * Number(el.dataset.parallax || 0)).toFixed(1)}px`;
+        }
+      });
     };
-    readBar();
-    window.addEventListener("scroll", readBar, { passive: true });
-    return () => { io?.disconnect(); window.removeEventListener("scroll", readBar); };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => { io?.disconnect(); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
   }, [pathname]);
 
   useEffect(() => {

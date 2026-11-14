@@ -51,8 +51,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     <div className="-mt-10 space-y-6">
       {/* hero — the particle star sits to the right on wide screens */}
       <section className="relative isolate flex min-h-[calc(100vh-7rem)] items-center pb-16 pt-10">
-        <HeroTiles />
-        <div className="max-w-2xl">
+        <div data-parallax="0.18" className="absolute inset-0 -z-10"><HeroTiles /></div>
+        <div data-parallax="-0.12" className="max-w-2xl">
           <FoldTitle text={tr(journal?.title, locale)} delay={0.3}
             className="font-serif text-[clamp(2.75rem,7vw,5.75rem)] font-light leading-[0.98] tracking-[-0.03em] text-slate-900" />
           <p className="reveal mt-7 max-w-xl text-lg leading-relaxed text-slate-600" style={{ animationDelay: ".55s" }}>{tr(journal?.description, locale)}</p>
@@ -97,7 +97,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       {cfpEnd && (
         <section data-reveal className="py-6">
           <div className="card relative overflow-hidden border-accent/40 p-8 sm:p-10">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" aria-hidden="true" />
+            <div data-parallax="0.35" className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" aria-hidden="true" />
             <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-xl">
                 <h2 className="text-2xl sm:text-3xl">{cfpOpen ? t("x.cfpTitle") : t("x.cfpClosed")}</h2>
@@ -128,11 +128,11 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </dl>
       </section>
 
-      <section data-reveal className="py-12">
+      <section data-reveal data-scene-zone="split4" className="py-12">
         <h2 data-scramble className="max-w-xl text-3xl leading-tight sm:text-4xl">{t("x.howTitle")}</h2>
-        <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200/50 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map(([h, p], i) => (
-            <li key={h} className="step bg-slate-50/85 p-7 backdrop-blur" style={{ transitionDelay: `${i * 140}ms` }}>
+            <li key={h} className="step bg-slate-50/50 p-7" style={{ transitionDelay: `${i * 140}ms` }}>
               <span className="step-num font-serif text-4xl font-light text-accent">{i + 1}</span>
               <h3 className="mt-6 text-lg">{h}</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-500">{p}</p>

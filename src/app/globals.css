@@ -236,3 +236,22 @@ html.theme-vt::view-transition-new(root) { animation: themeReveal 0.8s cubic-bez
   .bell-ring, .icon-spin, .ripple { animation: none; }
   .cursor-ring { display: none; }
 }
+
+/* ---- Batch E: reading ring ---- */
+.read-ring {
+  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 45; width: 3.25rem; height: 3.25rem;
+  border-radius: 9999px; display: grid; place-items: center; color: rgb(var(--s900));
+  background: rgb(var(--s100) / 0.8); backdrop-filter: blur(12px); border: 1px solid rgb(var(--s200));
+  opacity: 0; transform: translateY(12px) scale(.9); pointer-events: none;
+  transition: opacity .3s, transform .3s cubic-bezier(.2,.8,.2,1.2);
+}
+.read-ring.on { opacity: 1; transform: none; pointer-events: auto; }
+.read-ring svg:first-child { position: absolute; inset: 0; transform: rotate(-90deg); }
+.read-ring circle { fill: none; stroke-width: 2.5; }
+.read-ring-track { stroke: rgb(var(--s200)); }
+.read-ring-fill { stroke: rgb(var(--acc)); stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--p, 0)); transition: stroke-dashoffset .15s linear; }
+.read-ring-num { font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; transition: opacity .2s; }
+.read-ring-num small { font-size: .55rem; font-weight: 600; opacity: .7; }
+.read-ring-arrow { position: absolute; width: 1.1rem; height: 1.1rem; opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s; }
+.read-ring:hover .read-ring-num, .read-ring:focus-visible .read-ring-num { opacity: 0; }
+.read-ring:hover .read-ring-arrow, .read-ring:focus-visible .read-ring-arrow { opacity: 1; transform: none; }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ReadingRing from "@/components/fx/ReadingRing";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -127,6 +128,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
       <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issn={journal?.issn_online} publisher={journal?.publisher} locale={locale} />
       <span data-scene={`glyph:${(trExact(a.title_i18n, locale) || a.title).trim().charAt(0).toUpperCase()}`} hidden />
       <div id="readbar" className="read-progress" aria-hidden="true" />
+      <ReadingRing />
       <div className="grid gap-8 lg:grid-cols-[1fr_290px]">
         <article id="article-body" className="card p-6 sm:p-10">
           <nav className="mb-6 text-sm text-slate-500">
