@@ -1,5 +1,6 @@
 "use client";
 
+import { celebrate } from "@/lib/celebrate";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -29,6 +30,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
         doi: String(f.get("doi") || "") || null,
         pdfPath,
       });
+      celebrate();
       router.push(`/admin/articles/${articleId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.error"));

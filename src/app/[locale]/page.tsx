@@ -85,7 +85,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                 <IssueCover id={issue.id} number={issue.number} isSpecial={issue.is_special} size="lg"
                   volumeLabel={vol ? t("archives.volume", { n: vol.number, year: vol.year }) : ""} topic={topicOf(articles)} />
               </Link>
-              <h2 className="mt-6 text-2xl">{t("home.currentIssue")}</h2>
+              <h2 data-scramble className="mt-6 text-2xl">{t("home.currentIssue")}</h2>
               <p className="mt-2 text-sm text-slate-500">{issueLabel(t, issue as never)}<br />{formatDate(issue.published_at, locale)}</p>
               <Link href={`/issue/${issue.id}`} className="mt-4 inline-block text-sm font-semibold text-brand-700 hover:underline">{t("home.viewIssue")}</Link>
             </div>
@@ -116,7 +116,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       )}
 
       <section data-reveal className="py-12">
-        <h2 className="text-3xl sm:text-4xl">{t("x.numbersTitle")}</h2>
+        <h2 data-scramble className="text-3xl sm:text-4xl">{t("x.numbersTitle")}</h2>
         <dl className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {figures.map(([n, suf, label]) => (
             <div key={label} className="border-t border-slate-200 pt-5">
@@ -129,7 +129,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       <section data-reveal className="py-12">
-        <h2 className="max-w-xl text-3xl leading-tight sm:text-4xl">{t("x.howTitle")}</h2>
+        <h2 data-scramble className="max-w-xl text-3xl leading-tight sm:text-4xl">{t("x.howTitle")}</h2>
         <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map(([h, p], i) => (
             <li key={h} className="step bg-slate-50/85 p-7 backdrop-blur" style={{ transitionDelay: `${i * 140}ms` }}>
@@ -148,7 +148,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       {news.length > 0 && (
         <section data-reveal className="py-12">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-3xl sm:text-4xl">{t("x.news")}</h2>
+            <h2 data-scramble className="text-3xl sm:text-4xl">{t("x.news")}</h2>
             <Link href="/news" className="text-sm font-semibold text-brand-700 hover:underline">{t("x.allNews")}</Link>
           </div>
           <ul className="mt-8 grid gap-5 md:grid-cols-3">{news.map((n) => <NewsCard key={n.id} item={n} locale={locale} />)}</ul>

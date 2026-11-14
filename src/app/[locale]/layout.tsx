@@ -10,6 +10,7 @@ import SceneCanvas from "@/components/fx/SceneCanvas";
 import Effects from "@/components/fx/Effects";
 import NavProgress from "@/components/fx/NavProgress";
 import ClickSparks from "@/components/fx/ClickSparks";
+import Delight from "@/components/fx/Delight";
 import ShootingStars from "@/components/fx/ShootingStars";
 import { Suspense, ViewTransition } from "react";
 import { THEME_SCRIPT } from "@/components/fx/ThemeToggle";
@@ -52,6 +53,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           <Suspense fallback={null}><NavProgress /></Suspense>
           <SceneCanvas />
           <ClickSparks />
+          <Delight />
           <ShootingStars />
           <Effects />
           <div className="relative z-10 flex min-h-screen flex-col">

@@ -28,7 +28,7 @@ export default function NotificationBell({ items }: { items: BellItem[] }) {
     <div className="relative" ref={box}>
       <button onClick={() => setOpen((o) => !o)} className="navlink relative rounded-full p-1.5" aria-expanded={open}
         aria-label={`${t("notifications")}${unread ? ` (${unread})` : ""}`}>
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8" /><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0" /></svg>
+        <svg className={unread > 0 ? "bell-ring" : undefined} width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8" /><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0" /></svg>
         {unread > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-ink">{unread}</span>}
       </button>
       {open && (

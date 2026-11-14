@@ -1,5 +1,6 @@
 "use client";
 
+import { celebrate } from "@/lib/celebrate";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -133,6 +134,7 @@ export default function SubmitForm({ journalId, userId, sections, me }: Props) {
       const { error: e5 } = await supabase.from("submissions").update({ status: "submitted" }).eq("id", sub.id);
       if (e5) throw e5;
 
+      celebrate();
       router.push(`/dashboard/submissions/${sub.id}`);
       router.refresh();
     } catch (err) {
