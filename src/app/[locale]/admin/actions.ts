@@ -321,3 +321,97 @@ export async function deleteConference(id: string) {
   await supabase.from("conferences").delete().eq("id", id);
   done();
 }
+
+/* ---------- email templates ---------- */
+
+export async function saveEmailTemplate(key: string, subject: Record<string, string>, body: Record<string, string>) {
+  const { supabase, user } = await staff();
+  const { EMAIL_KEYS } = await import("@/lib/email-templates");
+  if (!(EMAIL_KEYS as readonly string[]).includes(key)) throw new Error("Unknown template");
+  const clean = (o: Record<string, string>) => Object.fromEntries(["uz", "ru", "en"].map((l) => [l, String(o[l] ?? "").slice(0, 20_000)]));
+  const row = { subject: clean(subject), body: clean(body), updated_at: new Date().toISOString(), updated_by: user!.id };
+  const { data: existing } = await supabase.from("email_templates").select("key").eq("key", key).maybeSingle();
+  const { error } = existing
+    ? await supabase.from("email_templates").update(row).eq("key", key)
+    : await supabase.from("email_templates").insert({ key, ...row });
+  if (error) throw new Error(error.message);
+  revalidatePath("/[locale]/admin/emails", "layout");
+}
+
+export async function resetEmailTemplate(key: string) {
+  const { supabase } = await staff();
+  await supabase.from("email_templates").delete().eq("key", key);
+  revalidatePath("/[locale]/admin/emails", "layout");
+}
+
+/* ---------- bulk import of old issues ---------- */
+
+export type ImportRow = {
+  volume: number; year: number; issue: number; issue_date: string; special: boolean; section: string;
+  title: string; title_ru: string; title_en: string; authors: { name: string; affiliation?: string; orcid?: string }[];
+  abstract: string; keywords: string[]; language: string; first_page: number | null; last_page: number | null; doi: string;
+  pdf_path: string | null; full_text: string | null;
+};
+
+/** Adds articles to the archive, creating volumes and issues as needed. Called in small batches by the import page. */
+export async function importArticles(rows: ImportRow[], skipExistingDoi: boolean) {
+  const { supabase } = await staff();
+  if (rows.length > 50) throw new Error("Too many rows in one batch");
+  const { data: journal } = await supabase.from("journals").select("id").limit(1).single();
+  if (!journal) throw new Error("No journal");
+  const jid = journal.id as string;
+  const [{ data: vols }, { data: sections }] = await Promise.all([
+    supabase.from("volumes").select("id, number, year").eq("journal_id", jid),
+    supabase.from("sections").select("id, title").eq("journal_id", jid),
+  ]);
+  const volumes = (vols ?? []) as { id: string; number: number; year: number }[];
+  const issueCache = new Map<string, string>();
+  let added = 0, skipped = 0;
+
+  for (const r of rows) {
+    if (skipExistingDoi && r.doi) {
+      const { data: dup } = await supabase.from("articles").select("id").eq("doi", r.doi).maybeSingle();
+      if (dup) { skipped++; continue; }
+    }
+    // volume
+    let vol = volumes.find((v) => v.number === r.volume);
+    if (vol && vol.year !== r.year) throw new Error(`Volume ${r.volume} already exists for ${vol.year}`);
+    if (!vol) {
+      const { data, error } = await supabase.from("volumes").insert({ journal_id: jid, number: r.volume, year: r.year }).select("id, number, year").single();
+      if (error) throw new Error(error.message);
+      vol = data as { id: string; number: number; year: number };
+      volumes.push(vol);
+    }
+    // issue (published, dated as in the file)
+    const ik = `${vol.id}/${r.issue}/${r.special}`;
+    let issueId = issueCache.get(ik);
+    if (!issueId) {
+      const { data: found } = await supabase.from("issues").select("id, is_special").eq("volume_id", vol.id).eq("number", r.issue);
+      const match = ((found ?? []) as { id: string; is_special: boolean }[]).find((i) => i.is_special === r.special);
+      if (match) issueId = match.id;
+      else {
+        const { data, error } = await supabase.from("issues")
+          .insert({ volume_id: vol.id, number: r.issue, is_special: r.special, status: "published", published_at: new Date(r.issue_date).toISOString() })
+          .select("id").single();
+        if (error) throw new Error(error.message);
+        issueId = data.id as string;
+      }
+      issueCache.set(ik, issueId!);
+    }
+    const section = r.section
+      ? ((sections ?? []) as { id: string; title: Record<string, string> }[]).find((s) => Object.values(s.title ?? {}).some((t) => t.trim().toLowerCase() === r.section.trim().toLowerCase()))
+      : undefined;
+    const { error } = await supabase.from("articles").insert({
+      journal_id: jid, issue_id: issueId, section_id: section?.id ?? null,
+      title: r.title.slice(0, 1000), title_i18n: Object.fromEntries(Object.entries({ ru: r.title_ru, en: r.title_en }).filter(([, v]) => v)),
+      abstract: r.abstract, keywords: r.keywords.slice(0, 30), language: r.language || "uz",
+      authors: r.authors.slice(0, 40), first_page: r.first_page, last_page: r.last_page, doi: r.doi || null,
+      pdf_path: r.pdf_path, full_text: r.full_text?.slice(0, 200_000) || null,
+      status: "published", published_at: new Date(r.issue_date).toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    added++;
+  }
+  done();
+  return { added, skipped };
+}

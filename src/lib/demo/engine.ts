@@ -196,7 +196,32 @@ function notifyRow(user_id: string, type: string, submission_id: string, link: s
 const staffIds = () => db().profiles.filter((p: any) => p.role === "editor" || p.role === "admin").map((p: any) => p.id);
 
 // mirrors the database triggers (event log + notifications)
+/* Same as the audit trigger in the database: one change-log row per insert/update/delete. */
+const AUDITED = new Set(["submissions", "review_assignments", "articles", "issues", "volumes", "profiles", "journals", "pages", "news", "editorial_board", "conferences", "email_templates"]);
+const SKIP = new Set(["updated_at", "search", "full_text", "views", "downloads"]);
+function auditLabel(x: any): string {
+  const t = x?.title;
+  const title = t && typeof t === "object" ? t.en || t.uz || t.ru : t;
+  return String(title || x?.full_name || x?.name || x?.slug || x?.email || x?.key || (x?.number != null ? `#${x.number}` : "")).slice(0, 200);
+}
+function audit(table: string, action: "insert" | "update" | "delete", before: any | null, after: any | null, uid: string | null) {
+  if (!AUDITED.has(table)) return;
+  const changes: Record<string, any> = {};
+  if (action === "update") {
+    for (const k of Object.keys(after)) {
+      if (SKIP.has(k) || JSON.stringify(before[k]) === JSON.stringify(after[k])) continue;
+      const short = (v: any) => v === null || typeof v === "number" || typeof v === "boolean" || (typeof v === "string" && v.length <= 80);
+      changes[k] = short(after[k]) && short(before[k] ?? null) ? { from: before[k] ?? null, to: after[k] } : {};
+    }
+    if (!Object.keys(changes).length) return;
+  }
+  const log = db().audit_log;
+  const row = after ?? before;
+  log.push({ id: (log.at(-1)?.id ?? 0) + 1, actor_id: uid, action, entity: table, entity_id: row?.id ?? null, label: auditLabel(row), changes, created_at: now() });
+}
+
 function afterWrite(table: string, before: any | null, after: any, uid: string | null) {
+  audit(table, before ? "update" : "insert", before, after, uid);
   if (table === "review_assignments") {
     if (!before) notifyRow(after.reviewer_id, "invite", after.submission_id, `/dashboard/reviews/${after.id}`);
     else if (after.status === "completed" && before.status !== "completed")
@@ -250,6 +275,7 @@ function runQuery(q: Query, uid: string | null): Result {
   } else {
     rows = filtered();
     store[q.table] = table.filter((r) => !rows.includes(r));
+    rows.forEach((r) => audit(q.table, "delete", r, null, uid));
     projectCols = q.returning;
   }
   if (projectCols === undefined) return { data: null, error: null };

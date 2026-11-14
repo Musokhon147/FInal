@@ -13,6 +13,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
 
   const items = [
     ["/admin", t("dashboard")],
+    ["/admin/stats", tn("adm.stats")],
     ["/admin/submissions", t("submissions")],
     ["/admin/issues", t("issues")],
     ["/admin/articles", t("articles")],
@@ -20,6 +21,9 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
     ["/admin/board", tn("nav.board")],
     ["/admin/news", tn("x.news")],
     ["/admin/conferences", tn("x.conferences")],
+    ["/admin/emails", tn("adm.emails")],
+    ["/admin/log", tn("adm.log")],
+    ["/admin/import", tn("adm.import")],
     ...(profile?.role === "admin" ? [["/admin/users", t("users")], ["/admin/settings", tn("x.settings")]] : []),
   ];
 

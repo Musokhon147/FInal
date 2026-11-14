@@ -289,8 +289,24 @@ export function createSeed(): DemoDb {
   submission_authors.push({ id: "sa-6", submission_id: "sub-5", full_name: "John Lee", email: "author2@demo.uz", affiliation: "Westminster International University in Tashkent", orcid: null, is_corresponding: true, sort_order: 0 });
   submission_events.push(ev("sub-5", null, "submitted", "2026-07-01"), ev("sub-5", "submitted", "rejected", "2026-07-24", "The sample is too small for the conclusions drawn."));
 
+  // change log history, shaped like rows written by the audit trigger
+  let al = 0;
+  const subTitle = (id: string) => submissions.find((x: any) => x.id === id)?.title ?? id;
+  const audit_log: any[] = submission_events
+    .filter((x) => x.from_status)
+    .map((x) => ({ id: ++al, actor_id: "u-admin", action: "update", entity: "submissions", entity_id: x.submission_id, label: subTitle(x.submission_id),
+      changes: { status: { from: x.from_status, to: x.to_status } }, created_at: x.created_at }));
+  audit_log.push(
+    { id: ++al, actor_id: "u-admin", action: "update", entity: "journals", entity_id: J, label: "Ilmiy jurnal", changes: { cfp_deadline: { from: null, to: "2026-12-20" } }, created_at: d("2026-11-05") },
+    { id: ++al, actor_id: "u-admin", action: "insert", entity: "news", entity_id: "news-1", label: "Submissions open for Issue 4", changes: {}, created_at: d("2026-11-05") },
+    { id: ++al, actor_id: "u-admin", action: "update", entity: "issues", entity_id: "iss-3-3", label: "#3", changes: { status: { from: "draft", to: "published" } }, created_at: d("2026-11-01") },
+    { id: ++al, actor_id: "u-admin", action: "update", entity: "profiles", entity_id: "u-reviewer", label: "Taqrizchi (demo)", changes: { is_reviewer: { from: false, to: true } }, created_at: d("2026-09-01") },
+  );
+  audit_log.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).forEach((r, i) => (r.id = i + 1));
+
   return {
     profiles, journals, sections, volumes, issues, articles, submissions, submission_authors, submission_files,
     review_assignments, submission_events, pages, editorial_board, payments: [], site_settings: [], news, notifications, conferences,
+    audit_log, email_templates: [],
   };
 }
