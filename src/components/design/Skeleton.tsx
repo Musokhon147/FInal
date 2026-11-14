@@ -64,3 +64,39 @@ export function PanelSkeleton() {
     </div>
   );
 }
+
+/** Shown instantly when opening an article (pages without loading.tsx, so 404s keep their status). */
+export function ArticleSkeleton() {
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+      <div className="space-y-6">
+        <Bone className="h-3.5 w-40 rounded" />
+        <div className="space-y-3"><Bone className="h-10 w-11/12 rounded-xl" /><Bone className="h-10 w-2/3 rounded-xl" /></div>
+        <Bone className="h-4 w-1/2 rounded" />
+        <div className="card space-y-3 p-6 sm:p-10">
+          {Array.from({ length: 9 }, (_, i) => <Bone key={i} className={`h-3.5 rounded ${i % 4 === 3 ? "w-2/3" : "w-full"}`} />)}
+        </div>
+      </div>
+      <div className="hidden space-y-4 lg:block">
+        <div className="card space-y-3 p-6"><Bone className="h-10 w-full rounded-xl" /><Bone className="h-3 w-3/4 rounded" /><Bone className="h-3 w-1/2 rounded" /></div>
+        <div className="card space-y-3 p-6"><Bone className="h-3 w-24 rounded" /><Bone className="h-16 w-full rounded-lg" /></div>
+      </div>
+    </div>
+  );
+}
+
+export function IssueSkeleton() {
+  return (
+    <div className="grid gap-10 md:grid-cols-[240px_1fr]">
+      <div className="space-y-3"><Bone className="aspect-[3/4] w-full rounded-xl" /><Bone className="h-4 w-2/3 rounded" /><Bone className="h-3 w-1/2 rounded" /></div>
+      <div className="space-y-6">
+        <Bone className="h-10 w-2/3 rounded-xl" />
+        <div className="card divide-y divide-slate-200 p-2">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="space-y-2.5 p-4"><Bone className="h-4 w-11/12 rounded" /><Bone className="h-3 w-1/2 rounded" /></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

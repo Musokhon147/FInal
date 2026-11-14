@@ -255,3 +255,25 @@ html.theme-vt::view-transition-new(root) { animation: themeReveal 0.8s cubic-bez
 .read-ring-arrow { position: absolute; width: 1.1rem; height: 1.1rem; opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s; }
 .read-ring:hover .read-ring-num, .read-ring:focus-visible .read-ring-num { opacity: 0; }
 .read-ring:hover .read-ring-arrow, .read-ring:focus-visible .read-ring-arrow { opacity: 1; transform: none; }
+
+/* ---- Batch F: first-visit intro, instant skeletons ---- */
+.intro {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; pointer-events: none;
+  background: rgb(var(--s50)); animation: introOut .7s cubic-bezier(.7,0,.3,1) 1.5s forwards;
+}
+html.intro-seen .intro { display: none; }
+.intro-star { width: min(30vw, 150px); overflow: visible; animation: introStar 2.2s cubic-bezier(.2,.8,.2,1) forwards; }
+.intro-star path { fill: none; stroke: rgb(var(--acc)); stroke-width: 1.6; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.1s cubic-bezier(.6,0,.2,1) .1s forwards; filter: drop-shadow(0 0 6px rgb(var(--acc) / .6)); }
+.intro-star .intro-inner { stroke: rgb(var(--b400)); animation-delay: .45s; }
+.intro-dot { fill: rgb(var(--acc)); transform: scale(0); animation: introDot .5s cubic-bezier(.2,.8,.2,1.4) .9s forwards; }
+@keyframes introStar { 0% { transform: rotate(-45deg) scale(.8); } 60% { transform: rotate(0) scale(1); } 100% { transform: rotate(0) scale(1.6); } }
+@keyframes introDot { to { transform: scale(1); } }
+@keyframes introOut { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .intro { display: none; } }
+
+.instant-skel {
+  position: fixed; inset: 0; z-index: 35; overflow: hidden;
+  background: rgb(var(--s50) / 0.92); backdrop-filter: blur(6px);
+  opacity: 0; animation: skelIn .2s ease .12s forwards;
+}
+@keyframes skelIn { to { opacity: 1; } }

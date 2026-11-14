@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 
-export const THEME_SCRIPT = `try{if(localStorage.getItem("theme")==="light")document.documentElement.classList.add("light")}catch(e){}`;
+export const THEME_SCRIPT = `try{var d=document.documentElement;if(localStorage.getItem("theme")==="light")d.classList.add("light");if(localStorage.getItem("introSeen"))d.classList.add("intro-seen");else localStorage.setItem("introSeen","1")}catch(e){document.documentElement.classList.add("intro-seen")}`;
 
 function subscribe(cb: () => void) {
   const o = new MutationObserver(cb);

@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
+import { ArticleSkeleton, IssueSkeleton } from "@/components/design/Skeleton";
+
+type Kind = "article" | "issue" | null;
+const kindOf = (path: string): Kind => {
+  const m = path.match(/^\/(?:uz|ru|en)\/(article|issue)\/[^/]+\/?$/);
+  return m ? (m[1] as Kind) : null;
+};
 
 /**
  * Thin gold line at the top while a page loads, with a small eight-pointed
@@ -15,6 +22,8 @@ export default function NavProgress() {
   const key = `${pathname}?${search.toString()}`;
   const keyRef = useRef(key);
   const [startedAt, setStartedAt] = useState<string | null>(null); // URL when loading began
+  const [kind, setKind] = useState<Kind>(null); // page type being opened, for the instant skeleton
+  const [top, setTop] = useState(0); // skeleton starts under the header
 
   useEffect(() => { keyRef.current = key; }, [key]);
 
@@ -27,8 +36,10 @@ export default function NavProgress() {
       if (url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
       if (url.pathname === location.pathname && url.search === location.search) return; // same page / hash link
       setStartedAt(keyRef.current);
+      setKind(kindOf(url.pathname));
+      setTop(Math.max(0, document.querySelector("header")?.getBoundingClientRect().bottom ?? 0));
     };
-    const onSubmit = () => setStartedAt(keyRef.current);
+    const onSubmit = () => { setStartedAt(keyRef.current); setKind(null); };
     // capture phase: Next.js links cancel the click before it bubbles up
     document.addEventListener("click", onClick, true);
     document.addEventListener("submit", onSubmit, true);
@@ -46,6 +57,12 @@ export default function NavProgress() {
   }, [startedAt, done]);
 
   return (
+    <>
+    {loading && kind && (
+      <div className="instant-skel" style={{ top }} aria-hidden="true">
+        <div className="mx-auto w-full max-w-7xl px-5 py-10">{kind === "article" ? <ArticleSkeleton /> : <IssueSkeleton />}</div>
+      </div>
+    )}
     <div aria-hidden="true" className={`nav-progress ${loading ? "is-loading" : done ? "is-done" : ""}`}>
       <span className="nav-progress-bar">
         <svg className="nav-progress-star" width="14" height="14" viewBox="0 0 40 40" fill="rgb(var(--acc))">
@@ -53,5 +70,6 @@ export default function NavProgress() {
         </svg>
       </span>
     </div>
+    </>
   );
 }

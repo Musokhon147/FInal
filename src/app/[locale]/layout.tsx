@@ -11,6 +11,7 @@ import Effects from "@/components/fx/Effects";
 import NavProgress from "@/components/fx/NavProgress";
 import ClickSparks from "@/components/fx/ClickSparks";
 import Delight from "@/components/fx/Delight";
+import Intro from "@/components/fx/Intro";
 import ShootingStars from "@/components/fx/ShootingStars";
 import { Suspense, ViewTransition } from "react";
 import { THEME_SCRIPT } from "@/components/fx/ThemeToggle";
@@ -49,6 +50,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@300;400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen">
+        <Intro />
         <NextIntlClientProvider>
           <Suspense fallback={null}><NavProgress /></Suspense>
           <SceneCanvas />
