@@ -124,6 +124,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
   return (
     <>
       <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issn={journal?.issn_online} publisher={journal?.publisher} locale={locale} />
+      <span data-scene={`glyph:${(trExact(a.title_i18n, locale) || a.title).trim().charAt(0).toUpperCase()}`} hidden />
       <div id="readbar" className="read-progress" aria-hidden="true" />
       <div className="grid gap-8 lg:grid-cols-[1fr_290px]">
         <article id="article-body" className="card p-6 sm:p-10">

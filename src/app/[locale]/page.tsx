@@ -12,6 +12,7 @@ import IssueCover from "@/components/design/IssueCover";
 import Countdown from "@/components/fx/Countdown";
 import NewsCard from "@/components/design/NewsCard";
 import FoldTitle from "@/components/design/FoldTitle";
+import HeroTiles from "@/components/design/HeroTiles";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
@@ -49,7 +50,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   return (
     <div className="-mt-10 space-y-6">
       {/* hero — the particle star sits to the right on wide screens */}
-      <section className="relative flex min-h-[calc(100vh-7rem)] items-center pb-16 pt-10">
+      <section className="relative isolate flex min-h-[calc(100vh-7rem)] items-center pb-16 pt-10">
+        <HeroTiles />
         <div className="max-w-2xl">
           <FoldTitle text={tr(journal?.title, locale)} delay={0.3}
             className="font-serif text-[clamp(2.75rem,7vw,5.75rem)] font-light leading-[0.98] tracking-[-0.03em] text-slate-900" />

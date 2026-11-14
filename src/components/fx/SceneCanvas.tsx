@@ -27,7 +27,7 @@ export default function SceneCanvas() {
       if (!alive || !ref.current) return;
       const s = createScene(ref.current);
       api.current = s;
-      s.setMode(modeRef.current);
+      s.setMode((document.querySelector("[data-scene]")?.getAttribute("data-scene") as SceneMode | null) || modeRef.current);
       const sync = () => s.setTheme(document.documentElement.classList.contains("light"));
       sync();
       window.addEventListener("scene:burst", onBurst);
@@ -44,8 +44,15 @@ export default function SceneCanvas() {
   }, []);
 
   useEffect(() => {
-    modeRef.current = modeFor(pathname);
-    api.current?.setMode(modeRef.current);
+    // a page can ask for its own shape, e.g. <span data-scene="glyph:K" hidden />
+    const pick = () => {
+      const custom = document.querySelector("[data-scene]")?.getAttribute("data-scene") as SceneMode | null;
+      modeRef.current = custom || modeFor(pathname);
+      api.current?.setMode(modeRef.current);
+    };
+    pick();
+    const id = requestAnimationFrame(pick); // after the new page has rendered
+    return () => cancelAnimationFrame(id);
   }, [pathname]);
 
   return <canvas ref={ref} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-full w-full print:hidden" />;

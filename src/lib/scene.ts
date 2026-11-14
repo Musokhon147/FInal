@@ -5,7 +5,7 @@
  */
 import * as THREE from "three";
 
-export type SceneMode = "star" | "book" | "stack" | "globe" | "field";
+export type SceneMode = "star" | "book" | "stack" | "globe" | "field" | `text:${string}` | `glyph:${string}`;
 export type SceneApi = { setMode(m: SceneMode): void; setTheme(light: boolean): void; burst(): void; dispose(): void };
 
 export function createScene(canvas: HTMLCanvasElement): SceneApi {
@@ -89,6 +89,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   for (let i = 0; i < N; i++) field.set([rand(-11, 11), rand(-7, 7), rand(-9, 2)], i * 3);
   const SHAPES: Record<string, Float32Array> = { star, book, stack, globe, field };
 
+  /** Sample the pixels of rendered text and spread the particles over them. */
+  function textShape(text: string, big: boolean): Float32Array | null {
+    const c = document.createElement("canvas"), W = 640, H = 320;
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    if (!g) return null;
+    const fam = getComputedStyle(document.body).getPropertyValue("--font-serif") || "sans-serif";
+    let size = big ? 300 : 210;
+    g.font = `400 ${size}px ${fam}`;
+    while (g.measureText(text).width > W * 0.92 && size > 40) { size -= 10; g.font = `400 ${size}px ${fam}`; }
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(text, W / 2, H / 2 + size * 0.04);
+    const data = g.getImageData(0, 0, W, H).data, pts: number[] = [];
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (data[(y * W + x) * 4 + 3] > 128) pts.push(x, y);
+    if (pts.length < 20) return null;
+    const out = new Float32Array(N * 3), scale = 7 / W;
+    for (let i = 0; i < N; i++) {
+      const k = (Math.floor(Math.random() * (pts.length / 2))) * 2;
+      out[i * 3] = (pts[k] - W / 2) * scale + rand(-0.01, 0.01);
+      out[i * 3 + 1] = -(pts[k + 1] - H / 2) * scale + rand(-0.01, 0.01);
+      out[i * 3 + 2] = rand(-0.25, 0.25);
+    }
+    return out;
+  }
+
   /* ---------- particles */
   const pos = new Float32Array(N * 3);
   const vel = new Float32Array(N * 3); // short-lived velocity for the scatter burst
@@ -104,10 +129,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   const mat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     uniforms: { uPR: { value: renderer.getPixelRatio() }, uOpacity: { value: 1 } },
-    vertexShader: `attribute float size; attribute vec3 color; varying vec3 vColor; uniform float uPR;
-      void main(){ vColor = color; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = size * uPR * (26.0 / -mv.z); gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `varying vec3 vColor; uniform float uOpacity;
-      void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); a *= a; gl_FragColor = vec4(vColor, a * uOpacity); }`,
+    // depth of field: far particles grow larger, softer and dimmer
+    vertexShader: `attribute float size; attribute vec3 color; varying vec3 vColor; varying float vBlur; uniform float uPR;
+      void main(){ vColor = color; vec4 mv = modelViewMatrix * vec4(position,1.0);
+        vBlur = clamp((-mv.z - 8.5) / 9.0, 0.0, 1.0);
+        gl_PointSize = size * uPR * (26.0 / -mv.z) * (1.0 + vBlur * 1.4); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vColor; varying float vBlur; uniform float uOpacity;
+      void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); a = mix(a * a, a * 0.55, vBlur); gl_FragColor = vec4(vColor, a * uOpacity * (1.0 - vBlur * 0.45)); }`,
   });
   const group = new THREE.Group();
   group.add(new THREE.Points(geo, mat));
@@ -137,18 +165,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   group.add(new THREE.LineSegments(lineGeo, lineMat));
 
   /* ---------- theme */
-  let light = false;
-  function setTheme(isLight: boolean) {
+  let light = false, themeMix = 1; // 0..1 progress of a colour change
+  const goalColors = new Float32Array(N * 3), fromColors = new Float32Array(N * 3);
+  function setTheme(isLight: boolean, instant = false) {
     light = isLight;
     const p = PAL[isLight ? "light" : "dark"];
     const cs = [p.gold, p.turq, p.ivory, p.lapis].map((h) => new THREE.Color(h));
-    for (let i = 0; i < N; i++) { const c = cs[role[i]]; colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b; }
-    geo.attributes.color.needsUpdate = true;
+    fromColors.set(colors);
+    for (let i = 0; i < N; i++) { const c = cs[role[i]]; goalColors[i * 3] = c.r; goalColors[i * 3 + 1] = c.g; goalColors[i * 3 + 2] = c.b; }
+    themeMix = instant || reduce ? 1 : 0;
+    if (themeMix === 1) { colors.set(goalColors); geo.attributes.color.needsUpdate = true; }
     mat.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
     lineMat.blending = mat.blending; lineMat.color.set(p.turq);
     mat.needsUpdate = true; lineMat.needsUpdate = true;
   }
-  setTheme(false);
+  setTheme(false, true);
 
   /* ---------- layout, input, modes */
   let mode = "star", target: Float32Array = star;
@@ -172,6 +203,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       star: wide ? { x: 3.3, y: 0.1, s: 1, o: 1 } : { x: 0, y: w < 640 ? 2.6 : 1.8, s: w < 640 ? 0.62 : 0.8, o: 0.42 },
       side: wide ? { x: 3.7, y: -0.3, s: 0.85, o: 0.34 } : { x: 0, y: 2.8, s: 0.6, o: 0.18 },
       field: { x: 0, y: 0, s: 1, o: 0.38 },
+      text: wide ? { x: 2.6, y: 0.2, s: 1, o: 0.9 } : { x: 0, y: 2.2, s: 0.7, o: 0.5 },
     };
   }
   layoutGroup();
@@ -190,7 +222,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   }
 
   function setMode(m: string) {
-    if (!SHAPES[m] || m === mode) return;
+    if (m === mode) return;
+    if (!SHAPES[m] && (m.startsWith("text:") || m.startsWith("glyph:"))) {
+      const shape = textShape(m.slice(m.indexOf(":") + 1), m.startsWith("glyph:"));
+      if (shape) SHAPES[m] = shape;
+    }
+    if (!SHAPES[m]) return;
     scatter(m === "star" ? 1.2 : 0.9);
     mode = m; target = SHAPES[m];
     if (reduce) { pos.set(target); geo.attributes.position.needsUpdate = true; }
@@ -238,11 +275,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       vel[j] *= 0.9; vel[j + 1] *= 0.9; vel[j + 2] *= 0.9;
     }
     geo.attributes.position.needsUpdate = true;
+    if (themeMix < 1) {
+      themeMix = Math.min(1, themeMix + dt / 0.9);
+      const e = themeMix * themeMix * (3 - 2 * themeMix);
+      for (let i = 0; i < N * 3; i++) colors[i] = fromColors[i] + (goalColors[i] - fromColors[i]) * e;
+      geo.attributes.color.needsUpdate = true;
+    }
     for (let p = 0; p < pairs.length; p++) { const s = pairs[p] * 3; linePos[p * 3] = pos[s]; linePos[p * 3 + 1] = pos[s + 1]; linePos[p * 3 + 2] = pos[s + 2]; }
     lineGeo.attributes.position.needsUpdate = true;
 
     mouse.sx += (mouse.x - mouse.sx) * 0.05; mouse.sy += (mouse.y - mouse.sy) * 0.05;
-    const pl = isStar ? placement.star : mode === "field" ? placement.field : placement.side;
+    const pl = isStar ? placement.star : mode === "field" ? placement.field : mode.startsWith("text:") ? placement.text : placement.side;
     const fade = isStar ? Math.min(scrollY / innerHeight, 1) : 0;
     group.position.x += (pl.x - group.position.x) * 0.05;
     group.position.y += (pl.y + fade * 1.6 - group.position.y) * 0.05;
