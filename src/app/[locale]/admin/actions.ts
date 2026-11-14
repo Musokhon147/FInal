@@ -130,6 +130,7 @@ export async function createIssue(formData: FormData) {
     number: int(formData, "number"),
     is_special: formData.get("is_special") === "on",
     title: i18n(formData, "title"),
+    conference_id: str(formData, "conference_id") || null,
   });
   if (error) throw new Error(error.message);
   done();
@@ -287,5 +288,34 @@ export async function setSimilarity(formData: FormData) {
     .update({ similarity_percent: pct, similarity_note: str(formData, "similarity_note") || null })
     .eq("id", str(formData, "id"));
   if (error) throw new Error(error.message);
+  done();
+}
+
+/* ---------- conferences */
+export async function saveConference(formData: FormData) {
+  const { supabase } = await staff();
+  const id = str(formData, "id");
+  const row = {
+    title: i18n(formData, "title"),
+    location: i18n(formData, "location"),
+    description: cleanI18nHtml(i18n(formData, "description")),
+    start_date: str(formData, "start_date"),
+    end_date: str(formData, "end_date") || null,
+    registration_deadline: str(formData, "registration_deadline") || null,
+  };
+  if (id) {
+    const { error } = await supabase.from("conferences").update(row).eq("id", id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
+    const { error } = await supabase.from("conferences").insert({ ...row, journal_id: j?.id });
+    if (error) throw new Error(error.message);
+  }
+  done();
+}
+
+export async function deleteConference(id: string) {
+  const { supabase } = await staff();
+  await supabase.from("conferences").delete().eq("id", id);
   done();
 }

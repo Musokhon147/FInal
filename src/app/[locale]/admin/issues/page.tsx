@@ -23,6 +23,8 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
     .select("id, number, year, issues(id, number, is_special, title, status, published_at, articles(count))")
     .order("number", { ascending: false });
   const volumes = (data ?? []) as Vol[];
+  const { data: confs } = await supabase.from("conferences").select("id, title").order("start_date", { ascending: false });
+  const conferences = (confs ?? []) as { id: string; title: I18nText }[];
   const nextVol = (volumes[0]?.number ?? 0) + 1;
 
   return (
@@ -53,6 +55,14 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
               <label><span className="label">{t("admin.number")}</span><input name="number" type="number" min={1} defaultValue={1} className="input" required /></label>
             </div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_special" /> {t("admin.special")}</label>
+            {conferences.length > 0 && (
+              <label className="block"><span className="label">{t("x.conference")}</span>
+                <select name="conference_id" className="input" defaultValue="">
+                  <option value="">{t("x.noConference")}</option>
+                  {conferences.map((c) => <option key={c.id} value={c.id}>{tr(c.title, locale)}</option>)}
+                </select>
+              </label>
+            )}
             <I18nFields name="title" label={t("common.title")} />
             <button className="btn-primary">{t("common.create")}</button>
           </form>

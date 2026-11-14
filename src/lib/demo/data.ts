@@ -56,14 +56,14 @@ export function createSeed(): DemoDb {
 
   const iss = (id: string, vol: string, number: number, date: string | null, extra: any = {}) => ({
     id, volume_id: vol, number, is_special: false, status: date ? "published" : "draft", published_at: date ? d(date) : null,
-    title: {}, description: {}, cover_url: null, created_at: d(date ?? "2026-11-10"), ...extra,
+    title: {}, description: {}, cover_url: null, conference_id: null, created_at: d(date ?? "2026-11-10"), ...extra,
   });
   const issues = [
     iss("iss-1-1", "vol-1", 1, "2024-06-01"), iss("iss-1-2", "vol-1", 2, "2024-12-01"),
     iss("iss-2-1", "vol-2", 1, "2025-03-01"), iss("iss-2-2", "vol-2", 2, "2025-07-01"), iss("iss-2-3", "vol-2", 3, "2025-11-01"),
     iss("iss-3-1", "vol-3", 1, "2026-03-01"), iss("iss-3-2", "vol-3", 2, "2026-07-01"),
     iss("iss-3-s1", "vol-3", 1, "2026-06-15", {
-      is_special: true,
+      is_special: true, conference_id: "conf-1",
       title: { uz: "Xalqaro konferensiya materiallari", ru: "Материалы международной конференции", en: "International conference proceedings" },
     }),
     iss("iss-3-3", "vol-3", 3, "2026-11-01"),
@@ -251,6 +251,27 @@ export function createSeed(): DemoDb {
       body: { uz: "<p>Koreya va Turkiyadan olimlar tahrir hay'atiga qo'shildi.</p>", ru: "<p>В редколлегию вошли учёные из Кореи и Турции.</p>", en: "<p>Researchers from Korea and Türkiye have joined the board.</p>" } },
   ];
 
+  const conferences = [
+    { id: "conf-1", journal_id: J, start_date: "2026-05-20", end_date: "2026-05-21", registration_deadline: "2026-04-30", cover_url: null,
+      created_at: d("2026-01-15"), updated_at: d("2026-06-15"),
+      title: { uz: "Raqamli iqtisodiyot va barqaror rivojlanish", ru: "Цифровая экономика и устойчивое развитие", en: "Digital Economy and Sustainable Development" },
+      location: { uz: "Toshkent, O'zbekiston", ru: "Ташкент, Узбекистан", en: "Tashkent, Uzbekistan" },
+      description: {
+        uz: "<p>Xalqaro ilmiy-amaliy konferensiya. Shu'balar: raqamli iqtisodiyot, yashil energetika, ta'limda raqamli texnologiyalar.</p>",
+        ru: "<p>Международная научно-практическая конференция. Секции: цифровая экономика, зелёная энергетика, цифровые технологии в образовании.</p>",
+        en: "<p>International research conference. Sections: digital economy, green energy, digital technology in education.</p>",
+      } },
+    { id: "conf-2", journal_id: J, start_date: "2027-04-15", end_date: "2027-04-16", registration_deadline: "2027-03-20", cover_url: null,
+      created_at: d("2026-11-01"), updated_at: d("2026-11-01"),
+      title: { uz: "Ta'lim sifati: Markaziy Osiyo tajribasi", ru: "Качество образования: опыт Центральной Азии", en: "Quality of Education: Central Asian Experience" },
+      location: { uz: "Samarqand, O'zbekiston", ru: "Самарканд, Узбекистан", en: "Samarkand, Uzbekistan" },
+      description: {
+        uz: "<p>Oliy ta'lim sifatini baholash, akkreditatsiya va raqamli ta'lim bo'yicha xalqaro konferensiya.</p><ul><li>Ma'ruzalar uch tilda qabul qilinadi</li><li>Eng yaxshi maqolalar jurnalning maxsus sonida nashr etiladi</li></ul>",
+        ru: "<p>Международная конференция по оценке качества высшего образования, аккредитации и цифровому обучению.</p><ul><li>Доклады принимаются на трёх языках</li><li>Лучшие статьи будут опубликованы в специальном выпуске журнала</li></ul>",
+        en: "<p>International conference on assessing the quality of higher education, accreditation and digital learning.</p><ul><li>Papers are accepted in three languages</li><li>The best papers will appear in a special issue of the journal</li></ul>",
+      } },
+  ];
+
   const notifications = [
     { id: "nt1", user_id: "u-author", type: "status", submission_id: "sub-2", status: "revision_required", link: "/dashboard/submissions/sub-2", read: false, created_at: d("2026-10-03") },
     { id: "nt2", user_id: "u-reviewer", type: "invite", submission_id: "sub-1", status: null, link: "/dashboard/reviews/rev-1", read: false, created_at: d("2026-10-05") },
@@ -268,6 +289,6 @@ export function createSeed(): DemoDb {
 
   return {
     profiles, journals, sections, volumes, issues, articles, submissions, submission_authors, submission_files,
-    review_assignments, submission_events, pages, editorial_board, payments: [], site_settings: [], news, notifications,
+    review_assignments, submission_events, pages, editorial_board, payments: [], site_settings: [], news, notifications, conferences,
   };
 }

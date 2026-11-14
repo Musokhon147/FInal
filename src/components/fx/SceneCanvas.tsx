@@ -8,7 +8,7 @@ function modeFor(path: string): SceneMode {
   if (path === "/" || path === "") return "star";
   if (/^\/(article|p|news)\//.test(path)) return "book";
   if (path === "/archives" || path.startsWith("/issue/")) return "stack";
-  if (path === "/board") return "globe";
+  if (path === "/board" || path.startsWith("/conferences")) return "globe";
   return "field";
 }
 

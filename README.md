@@ -8,6 +8,10 @@ The site uses a Three.js particle scene behind every page (star on the home page
 stack on the archive, globe on the editorial board), dark/light themes and Unbounded + Manrope fonts.
 `design-demo/index.html` (also served at `/demo`) is the same design as a single self-contained file.
 
+Also included: a rich text editor for pages, news and conferences; sitemap.xml, robots.txt, hreflang
+links, share images and ordered Google Scholar tags; review scores, a plagiarism similarity field and
+printable publication/reviewer certificates; a Conferences section with proceedings.
+
 Admin extras: **Settings** (logo, journal name, ISSN, indexing databases, call for papers),
 **Editorial board** and **News** editors, charts on the overview page, and a notifications bell for
 authors, reviewers and editors.
@@ -52,6 +56,8 @@ A yellow banner shows the site is in demo mode. Changes are kept in memory and r
    - `supabase/migrations/20261110000000_init.sql` (tables, security rules, storage buckets)
    - `supabase/seed.sql` (starter journal, sections, pages, one example article — edit freely)
    - `supabase/migrations/20261114000000_design_features.sql` (journal settings, editorial board groups, news, notifications)
+   - `supabase/migrations/20261114010000_editorial_tools.sql` (review scores, plagiarism similarity check)
+   - `supabase/migrations/20261114020000_conferences.sql` (conferences and their proceedings)
 3. **Environment variables**: in Vercel → Project → Settings → Environment Variables (or `.env.local` locally) set
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Supabase → Project Settings → API,
    then redeploy. The demo banner disappears and the site uses the real database.

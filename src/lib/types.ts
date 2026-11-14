@@ -69,6 +69,17 @@ export interface BoardMember {
   sort_order: number;
 }
 
+export interface Conference {
+  id: string;
+  title: I18nText;
+  description: I18nText;
+  location: I18nText;
+  start_date: string;
+  end_date: string | null;
+  registration_deadline: string | null;
+  cover_url: string | null;
+}
+
 export interface NewsItem {
   id: string;
   title: I18nText;
@@ -112,6 +123,7 @@ export interface Issue {
   is_special: boolean;
   status: "draft" | "published";
   published_at: string | null;
+  conference_id: string | null;
 }
 
 export interface ArticleAuthor {

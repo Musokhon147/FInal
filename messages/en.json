@@ -13,7 +13,8 @@
     "dashboard": "My account",
     "admin": "Admin panel",
     "logout": "Log out",
-    "news": "News"
+    "news": "News",
+    "conferences": "Conferences"
   },
   "common": {
     "save": "Save",
@@ -365,6 +366,22 @@
     "certNo": "Certificate no.",
     "certVerify": "Verify",
     "certEditor": "Editor-in-chief",
-    "certIssued": "Issued"
+    "certIssued": "Issued",
+    "conferences": "Conferences",
+    "upcoming": "Upcoming conferences",
+    "past": "Past conferences",
+    "location": "Location",
+    "dates": "Dates",
+    "regDeadline": "Registration deadline",
+    "proceedings": "Conference proceedings",
+    "addConference": "Add conference",
+    "conference": "Conference",
+    "noConference": "— no conference —",
+    "submitToConference": "Submit a paper",
+    "noConferences": "No conferences yet.",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "daysLeft": "{n} days left to register",
+    "proceedingsSoon": "Proceedings will be published after the conference."
   }
 }

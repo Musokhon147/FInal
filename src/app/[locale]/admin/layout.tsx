@@ -19,6 +19,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
     ["/admin/pages", t("pages")],
     ["/admin/board", tn("nav.board")],
     ["/admin/news", tn("x.news")],
+    ["/admin/conferences", tn("x.conferences")],
     ...(profile?.role === "admin" ? [["/admin/users", t("users")], ["/admin/settings", tn("x.settings")]] : []),
   ];
 

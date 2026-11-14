@@ -15,7 +15,7 @@ async function load(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("issues")
-    .select("*, volumes(number, year)")
+    .select("*, volumes(number, year), conferences(id, title)")
     .eq("id", id)
     .maybeSingle();
   return data;
@@ -61,6 +61,12 @@ export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[
       <div className="card">
         <h1 className="text-3xl">{issueLabel(t, issue)}</h1>
         {tr(issue.title, locale) && <p className="mt-1 text-lg text-slate-700">{tr(issue.title, locale)}</p>}
+        {issue.conferences && (
+          <p className="mt-2 text-sm">
+            <span className="text-slate-500">{t("x.proceedings")}: </span>
+            <Link href={`/conferences/${issue.conferences.id}`} className="text-brand-700 hover:underline">{tr(issue.conferences.title, locale)}</Link>
+          </p>
+        )}
         {issue.published_at && (
           <p className="mt-1 text-sm text-slate-500">
             {t("issue.published", { date: formatDate(issue.published_at, locale) })}

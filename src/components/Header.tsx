@@ -46,7 +46,8 @@ export default async function Header() {
           <Link href="/archives" className="navlink">{t("nav.archives")}</Link>
           <Link href="/board" className="navlink">{t("nav.board")}</Link>
           <Link href="/news" className="navlink">{t("nav.news")}</Link>
-          {pages.slice(0, user ? 0 : 2).map((p) => (
+          <Link href="/conferences" className="navlink">{t("nav.conferences")}</Link>
+          {pages.slice(0, user ? 0 : 1).map((p) => (
             <Link key={p.id} href={`/p/${p.slug}`} className="navlink">{tr(p.title, locale)}</Link>
           ))}
           <Link href="/search" className="navlink" aria-label={t("nav.search")}>
@@ -78,6 +79,7 @@ export default async function Header() {
         <Link href="/archives" className="navlink shrink-0">{t("nav.archives")}</Link>
         <Link href="/board" className="navlink shrink-0">{t("nav.board")}</Link>
         <Link href="/news" className="navlink shrink-0">{t("nav.news")}</Link>
+        <Link href="/conferences" className="navlink shrink-0">{t("nav.conferences")}</Link>
         {pages.map((p) => <Link key={p.id} href={`/p/${p.slug}`} className="navlink shrink-0">{tr(p.title, locale)}</Link>)}
         <Link href="/search" className="navlink shrink-0">{t("nav.search")}</Link>
         <Link href="/dashboard/submit" className="shrink-0 font-semibold text-accent">{t("nav.submit")}</Link>

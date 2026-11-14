@@ -13,7 +13,8 @@
     "dashboard": "Shaxsiy kabinet",
     "admin": "Admin panel",
     "logout": "Chiqish",
-    "news": "Yangiliklar"
+    "news": "Yangiliklar",
+    "conferences": "Konferensiyalar"
   },
   "common": {
     "save": "Saqlash",
@@ -365,6 +366,22 @@
     "certNo": "Sertifikat raqami",
     "certVerify": "Tekshirish",
     "certEditor": "Bosh muharrir",
-    "certIssued": "Berilgan sana"
+    "certIssued": "Berilgan sana",
+    "conferences": "Konferensiyalar",
+    "upcoming": "Bo'lajak konferensiyalar",
+    "past": "O'tgan konferensiyalar",
+    "location": "Joy",
+    "dates": "Sanalar",
+    "regDeadline": "Ro'yxatdan o'tish muddati",
+    "proceedings": "Konferensiya materiallari",
+    "addConference": "Konferensiya qo'shish",
+    "conference": "Konferensiya",
+    "noConference": "— konferensiyasiz —",
+    "submitToConference": "Ma'ruza yuborish",
+    "noConferences": "Hozircha konferensiyalar yo'q.",
+    "startDate": "Boshlanish sanasi",
+    "endDate": "Tugash sanasi",
+    "daysLeft": "Ro'yxatdan o'tishga {n} kun qoldi",
+    "proceedingsSoon": "Materiallar konferensiyadan keyin nashr etiladi."
   }
 }

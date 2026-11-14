@@ -49,7 +49,8 @@ export function db(): DemoDb {
 type Rel = { one?: string; many?: string; fk: string };
 const REL: Record<string, Record<string, Rel>> = {
   articles: { sections: { one: "sections", fk: "section_id" }, issues: { one: "issues", fk: "issue_id" } },
-  issues: { volumes: { one: "volumes", fk: "volume_id" }, articles: { many: "articles", fk: "issue_id" } },
+  issues: { volumes: { one: "volumes", fk: "volume_id" }, articles: { many: "articles", fk: "issue_id" }, conferences: { one: "conferences", fk: "conference_id" } },
+  conferences: { issues: { many: "issues", fk: "conference_id" } },
   volumes: { issues: { many: "issues", fk: "volume_id" } },
   submissions: { profiles: { one: "profiles", fk: "submitter_id" }, sections: { one: "sections", fk: "section_id" } },
   notifications: { submissions: { one: "submissions", fk: "submission_id" } },
@@ -163,9 +164,11 @@ function withDefaults(table: string, v: any, uid: string | null) {
     case "articles":
       return { title_i18n: {}, abstract_i18n: {}, keywords: [], authors: [], license: "CC BY 4.0", views: 0, downloads: 0, sort_order: 0, status: "scheduled", published_at: null, updated_at: now(), ...base };
     case "issues":
-      return { status: "draft", published_at: null, is_special: false, title: {}, description: {}, cover_url: null, ...base };
+      return { status: "draft", published_at: null, is_special: false, title: {}, description: {}, cover_url: null, conference_id: null, ...base };
     case "pages":
       return { is_published: true, show_in_menu: false, sort_order: 0, title: {}, body: {}, ...base };
+    case "conferences":
+      return { title: {}, description: {}, location: {}, end_date: null, registration_deadline: null, cover_url: null, updated_at: now(), ...base };
     case "news":
       return { pinned: false, body: {}, title: {}, date: now().slice(0, 10), ...base };
     case "editorial_board":

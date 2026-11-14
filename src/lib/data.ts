@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "./supabase/server";
 import type { CmsPage, Journal } from "./types";
+import { formatDate } from "./i18n-field";
 
 export const getJournal = cache(async () => {
   const supabase = await createClient();
@@ -75,4 +76,22 @@ export function cfpWindow(deadline: string | null | undefined) {
   if (!deadline) return null;
   const end = new Date(deadline + "T23:59:59");
   return { end, open: end.getTime() > Date.now() };
+}
+
+/* ---------- conferences */
+export function dateRange(start: string, end: string | null | undefined, locale: string) {
+  const f = (d: string) => formatDate(d, locale);
+  return end && end !== start ? `${f(start)} – ${f(end)}` : f(start);
+}
+/** Split into upcoming (soonest first) and past (latest first). */
+export function splitConferences<T extends { start_date: string; end_date: string | null }>(list: T[]) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = list.filter((c) => (c.end_date ?? c.start_date) >= today).sort((a, b) => a.start_date.localeCompare(b.start_date));
+  const past = list.filter((c) => (c.end_date ?? c.start_date) < today).sort((a, b) => b.start_date.localeCompare(a.start_date));
+  return { upcoming, past };
+}
+export function daysUntil(date: string | null | undefined) {
+  if (!date) return null;
+  const d = Math.ceil((Date.parse(date + "T23:59:59") - Date.now()) / 864e5);
+  return d >= 0 ? d : null;
 }
