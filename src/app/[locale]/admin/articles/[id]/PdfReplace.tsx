@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { uploadArticlePdf } from "@/components/admin/uploadPdf";
+import { extractPdfText } from "@/components/admin/extractPdfText";
 import { setArticlePdf } from "../../actions";
 
 export default function PdfReplace({ articleId }: { articleId: string }) {
@@ -21,7 +22,8 @@ export default function PdfReplace({ articleId }: { articleId: string }) {
         setBusy(true);
         setError(null);
         try {
-          await setArticlePdf(articleId, await uploadArticlePdf(file));
+          const [path, text] = await Promise.all([uploadArticlePdf(file), extractPdfText(file)]);
+          await setArticlePdf(articleId, path, text);
           router.refresh();
         } catch (err) {
           setError(err instanceof Error ? err.message : t("error"));

@@ -287,3 +287,11 @@ html.fx-off .skel { animation: none !important; }
 
 /* safety net: decorative layers never cause sideways scrolling on phones */
 body { overflow-x: clip; }
+
+/* ---- PDF viewer ---- */
+.pdf-btn { display: inline-flex; min-width: 2rem; height: 2rem; align-items: center; justify-content: center; border-radius: .5rem; color: rgb(var(--s900)); font-size: 1.05rem; transition: background-color .15s; }
+.pdf-btn:hover:not(:disabled) { background: rgb(var(--s200)); }
+.pdf-btn:disabled { opacity: .35; }
+.pdf-btn.px-3 { font-size: .85rem; font-weight: 600; }
+.pdf-page.is-drawn .pdf-page-skel { display: none; }
+.pdf-viewer:fullscreen { border-radius: 0; background: rgb(var(--s100)); }

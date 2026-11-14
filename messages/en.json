@@ -280,7 +280,7 @@
       ]
     ],
     "onPage": "On this page",
-    "pdfPreview": "PDF preview",
+    "pdfPreview": "Read the article",
     "openPdf": "Open full PDF",
     "copy": "Copy",
     "copied": "Copied",
@@ -393,6 +393,18 @@
     "sharedKeywords": "Shared keywords",
     "toTop": "Back to top",
     "fxTurnOff": "Turn effects off",
-    "fxTurnOn": "Turn effects on"
+    "fxTurnOn": "Turn effects on",
+    "pdfPrev": "Previous page",
+    "pdfNext": "Next page",
+    "pdfZoomIn": "Zoom in",
+    "pdfZoomOut": "Zoom out",
+    "pdfFull": "Full screen",
+    "pdfExitFull": "Exit",
+    "pdfDownload": "Download PDF",
+    "pdfError": "The PDF could not be shown.",
+    "related": "Related articles",
+    "foundInText": "In text",
+    "foundInAbstract": "In abstract",
+    "searchHint": "Search titles, authors, keywords or the full text of articles"
   }
 }

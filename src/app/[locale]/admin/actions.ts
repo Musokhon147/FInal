@@ -68,6 +68,7 @@ export async function publishSubmission(input: {
   lastPage: number | null;
   doi: string | null;
   pdfPath: string | null;
+  fullText?: string | null;
 }) {
   const { supabase } = await staff();
   const { data: s, error: e1 } = await supabase.from("submissions").select("*").eq("id", input.submissionId).single();
@@ -99,6 +100,7 @@ export async function publishSubmission(input: {
       last_page: input.lastPage,
       doi: input.doi || null,
       pdf_path: input.pdfPath,
+      full_text: input.fullText?.slice(0, 200_000) || null,
       status: live ? "published" : "scheduled",
       published_at: live ? new Date().toISOString() : null,
     })
@@ -180,9 +182,9 @@ export async function updateArticle(formData: FormData) {
   done();
 }
 
-export async function setArticlePdf(id: string, pdfPath: string) {
+export async function setArticlePdf(id: string, pdfPath: string, fullText?: string | null) {
   const { supabase } = await staff();
-  await supabase.from("articles").update({ pdf_path: pdfPath }).eq("id", id);
+  await supabase.from("articles").update({ pdf_path: pdfPath, full_text: fullText?.slice(0, 200_000) || null }).eq("id", id);
   done();
 }
 

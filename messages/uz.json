@@ -280,7 +280,7 @@
       ]
     ],
     "onPage": "Ushbu sahifada",
-    "pdfPreview": "PDF ko'rinishi",
+    "pdfPreview": "Maqolani o'qish",
     "openPdf": "To'liq PDF ni ochish",
     "copy": "Nusxalash",
     "copied": "Nusxa olindi",
@@ -393,6 +393,18 @@
     "sharedKeywords": "Umumiy kalit so'zlar",
     "toTop": "Yuqoriga qaytish",
     "fxTurnOff": "Effektlarni o'chirish",
-    "fxTurnOn": "Effektlarni yoqish"
+    "fxTurnOn": "Effektlarni yoqish",
+    "pdfPrev": "Oldingi sahifa",
+    "pdfNext": "Keyingi sahifa",
+    "pdfZoomIn": "Kattalashtirish",
+    "pdfZoomOut": "Kichraytirish",
+    "pdfFull": "To'liq ekran",
+    "pdfExitFull": "Chiqish",
+    "pdfDownload": "PDF yuklab olish",
+    "pdfError": "PDFni ko'rsatib bo'lmadi.",
+    "related": "O'xshash maqolalar",
+    "foundInText": "Matnda",
+    "foundInAbstract": "Annotatsiyada",
+    "searchHint": "Sarlavha, muallif, kalit so'z yoki maqola matnidan izlang"
   }
 }

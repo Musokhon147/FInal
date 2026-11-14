@@ -113,7 +113,7 @@ function matches(row: any, f: Filter): boolean {
     case "in":
       return f.val.includes(row[f.col]);
     case "text": {
-      const hay = [row.title, row.abstract, (row.keywords ?? []).join(" "), (row.authors ?? []).map((a: any) => a.name).join(" ")]
+      const hay = [row.title, row.abstract, (row.keywords ?? []).join(" "), (row.authors ?? []).map((a: any) => a.name).join(" "), row.full_text ?? "", ...Object.values(row.title_i18n ?? {}), ...Object.values(row.abstract_i18n ?? {})]
         .join(" ")
         .toLowerCase();
       return f.val

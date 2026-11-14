@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { uploadArticlePdf } from "@/components/admin/uploadPdf";
+import { extractPdfText } from "@/components/admin/extractPdfText";
 import { publishSubmission } from "../../actions";
 
 export default function PublishForm({ submissionId, issues }: { submissionId: string; issues: { id: string; label: string }[] }) {
@@ -20,7 +21,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
     setError(null);
     try {
       const file = f.get("pdf") as File | null;
-      const pdfPath = file?.size ? await uploadArticlePdf(file) : null;
+      const [pdfPath, fullText] = file?.size ? await Promise.all([uploadArticlePdf(file), extractPdfText(file)]) : [null, null];
       const num = (k: string) => (f.get(k) ? Number(f.get(k)) : null);
       const articleId = await publishSubmission({
         submissionId,
@@ -29,6 +30,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
         lastPage: num("last_page"),
         doi: String(f.get("doi") || "") || null,
         pdfPath,
+        fullText,
       });
       celebrate();
       router.push(`/admin/articles/${articleId}`);

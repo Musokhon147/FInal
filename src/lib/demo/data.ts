@@ -1,3 +1,4 @@
+import { demoFullText } from "./body";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Sample content for DEMO MODE. Every name, title and number here is made up.
 
@@ -112,7 +113,7 @@ export function createSeed(): DemoDb {
       "The paper reviews water allocation policies in the Aral Sea basin and evaluates drip irrigation pilots in Karakalpakstan."),
     art("iss-3-2", S1, [1, 12], "Kichik biznes subyektlarini moliyalashtirishda mikromoliya tashkilotlarining roli",
       [{ name: "Xolmatov Sardor", affiliation: uni("Toshkent moliya instituti, Toshkent") }],
-      "uz", ["mikromoliya", "kichik biznes", "kredit"],
+      "uz", ["mikromoliya", "kichik biznes", "kredit", "raqamli iqtisodiyot"],
       "Tadqiqotda mikromoliya tashkilotlarining kichik biznesni qo'llab-quvvatlashdagi o'rni 2020–2025-yillar ma'lumotlari asosida tahlil qilinadi."),
     art("iss-3-2", S3, [13, 18], "Цифровые компетенции учителей начальных классов",
       [{ name: "Ахмедова Малика", affiliation: "Ташкентский государственный педагогический университет, Узбекистан" }],
@@ -120,17 +121,18 @@ export function createSeed(): DemoDb {
       "Представлены результаты анкетирования 240 учителей начальных классов о навыках работы с цифровыми образовательными ресурсами."),
     art("iss-3-s1", S1, [1, 6], "Renewable energy adoption in Central Asian households",
       [{ name: "Malika Usmonova", affiliation: "Inha University in Tashkent, Uzbekistan" }],
-      "en", ["solar energy", "households", "energy policy"],
+      "en", ["solar energy", "households", "energy policy", "water management"],
       "Survey evidence on the uptake of rooftop solar panels among households in three regions of Uzbekistan."),
     art("iss-3-1", S1, [1, 9], "Turizm klasterlarini shakllantirishning tashkiliy-iqtisodiy mexanizmlari",
       [{ name: "Ergashev Bobur", affiliation: uni("Samarqand iqtisodiyot va servis instituti, Samarqand") }],
-      "uz", ["turizm", "klaster", "hududiy rivojlanish"],
+      "uz", ["turizm", "klaster", "hududiy rivojlanish", "innovatsiya"],
       "Maqolada turizm klasterlarini shakllantirishning xorijiy tajribasi va Samarqand viloyatida qo'llash imkoniyatlari ko'rib chiqiladi."),
     art("iss-2-3", S2, [1, 14], "A review of e-government services in Uzbekistan, 2015–2025",
       [{ name: "Shahzod Nazarov", affiliation: "Tashkent University of Information Technologies, Uzbekistan" }],
-      "en", ["e-government", "digital services", "public administration"],
+      "en", ["e-government", "digital services", "public administration", "digital economy"],
       "This review traces the development of the my.gov.uz portal and related public digital services over ten years."),
   ];
+  articles.forEach((a: any) => { a.full_text = demoFullText(a); });
 
   // ---------------- submissions in different workflow stages
   const sub = (id: string, submitter: string, status: string, title: string, created: string, extra: any = {}) => ({

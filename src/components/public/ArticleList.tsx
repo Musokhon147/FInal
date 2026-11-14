@@ -8,9 +8,10 @@ import type { Article } from "@/lib/types";
 export type ListedArticle = Pick<
   Article,
   "id" | "title" | "title_i18n" | "authors" | "first_page" | "last_page" | "doi" | "pdf_path" | "keywords"
-> & { sections?: { title: I18nText } | null };
+> & { sections?: { title: I18nText } | null; views?: number; downloads?: number };
 
-export default async function ArticleList({ articles }: { articles: ListedArticle[] }) {
+/** `snippets` (search results): a short passage around the match, keyed by article id. */
+export default async function ArticleList({ articles, snippets }: { articles: ListedArticle[]; snippets?: Record<string, { before: string; hit: string; after: string; where: "text" | "abstract" }> }) {
   const t = await getTranslations();
   const locale = await getLocale();
   if (!articles.length) return <p className="p-4 text-slate-500">{t("issue.empty")}</p>;
@@ -27,10 +28,22 @@ export default async function ArticleList({ articles }: { articles: ListedArticl
               </ViewTransition>
             </Link>
             <p className="mt-1 text-sm text-slate-600">{a.authors.map((au) => au.name).join(", ")}</p>
+            {snippets?.[a.id] && (
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                <span className="mr-1.5 rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">{t(snippets[a.id].where === "text" ? "x.foundInText" : "x.foundInAbstract")}</span>
+                …{snippets[a.id].before}<mark className="rounded bg-accent/25 px-0.5 text-slate-900">{snippets[a.id].hit}</mark>{snippets[a.id].after}…
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               {range && <span className="text-slate-500">{t("issue.pages", { range })}</span>}
               {a.doi && <a href={`https://doi.org/${a.doi}`} className="text-brand-700 hover:underline" target="_blank" rel="noreferrer">DOI: {a.doi}</a>}
               {a.pdf_path && <a href={`/api/download/${a.id}`} className="rounded bg-brand-50 px-2 py-0.5 font-medium text-brand-700 hover:bg-brand-100">PDF</a>}
+              {typeof a.views === "number" && (
+                <span className="ml-auto flex items-center gap-3 text-xs text-slate-500">
+                  <span title={t("article.views")} className="flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg><span className="sr-only">{t("article.views")}: </span>{a.views}</span>
+                  <span title={t("article.downloads")} className="flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" /></svg><span className="sr-only">{t("article.downloads")}: </span>{a.downloads ?? 0}</span>
+                </span>
+              )}
             </div>
           </li>
         );
@@ -40,7 +53,7 @@ export default async function ArticleList({ articles }: { articles: ListedArticl
 }
 
 export const ARTICLE_LIST_SELECT =
-  "id, title, title_i18n, authors, first_page, last_page, doi, pdf_path, keywords, sections(title)";
+  "id, title, title_i18n, authors, first_page, last_page, doi, pdf_path, keywords, views, downloads, sections(title)";
 
 /** Most frequent keyword among an issue's articles (shown on its cover). */
 export function topicOf(articles: { keywords: string[] }[]) {

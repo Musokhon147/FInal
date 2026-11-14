@@ -156,6 +156,7 @@ export interface Article {
   status: "scheduled" | "published";
   published_at: string | null;
   views: number;
+  full_text?: string | null;
   downloads: number;
 }
 

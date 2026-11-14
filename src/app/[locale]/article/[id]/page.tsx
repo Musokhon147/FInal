@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { relatedArticles, type RelatedCandidate } from "@/lib/related";
+import PdfViewer from "@/components/public/PdfViewer";
 import ReadingRing from "@/components/fx/ReadingRing";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -102,7 +104,11 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
   const journal = await getJournal();
 
   const supabase = await createClient();
-  await supabase.rpc("track_article", { aid: a.id, kind: "view" });
+  const [, { data: others }] = await Promise.all([
+    supabase.rpc("track_article", { aid: a.id, kind: "view" }),
+    supabase.from("articles").select("id, title, title_i18n, authors, keywords, published_at, section_id").eq("status", "published").neq("id", a.id).limit(500),
+  ]);
+  const related = relatedArticles(a.keywords, (others ?? []) as RelatedCandidate[], 3, a.section_id);
 
   const localTitle = trExact(a.title_i18n, locale);
   const localAbstract = trExact(a.abstract_i18n, locale);
@@ -187,23 +193,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
           {a.pdf_path && (
             <>
               <H2 id="art-preview">{t("x.pdfPreview")}</H2>
-              <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-slate-200">
-                <div className="paper relative mx-auto max-w-[640px] px-10 py-12 shadow-2xl" style={{ fontFamily: "Georgia, serif" }}>
-                  <div className="flex items-center justify-between border-b border-[#1c2238]/20 pb-3 text-[11px] text-[#55607a]">
-                    <span>{jt}</span><span>{iss ? issueLabel(t, iss) : ""}{range ? ` · ${range}` : ""}</span>
-                  </div>
-                  <h3 className="mt-8 text-center text-xl leading-snug" style={{ color: "#1c2238", fontFamily: "Georgia, serif" }}>{a.title}</h3>
-                  <p className="mt-3 text-center text-sm">{names.join(", ")}</p>
-                  <p className="mt-1 text-center text-[11px] italic text-[#55607a]">{a.authors.map((x) => x.affiliation).filter(Boolean).join("; ")}</p>
-                  <p className="mt-6 text-[12px] leading-relaxed"><b>{t("article.abstract")}.</b> {a.abstract}</p>
-                  <p className="mt-2 text-[12px]"><b>{t("article.keywords")}:</b> {a.keywords.join(", ")}</p>
-                  <div className="mt-6 space-y-2" aria-hidden="true">
-                    {[100, 96, 99, 92, 100, 88, 97, 94, 60].map((w, i) => <div key={i} className="h-2 rounded bg-[#1c2238]/10" style={{ width: `${w}%` }} />)}
-                  </div>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#fffdf7] to-transparent" />
-                </div>
-              </div>
-              <a href={`/api/download/${a.id}`} className="btn-primary mt-4">{t("x.openPdf")}</a>
+              <PdfViewer url={publicFileUrl("articles", a.pdf_path)} downloadHref={`/api/download/${a.id}`} />
             </>
           )}
         </article>
@@ -230,6 +220,25 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
           </dl>
         </aside>
       </div>
+
+      {related.length > 0 && (
+        <section data-reveal className="mt-16" aria-labelledby="related-h">
+          <h2 id="related-h" className="text-2xl sm:text-3xl">{t("x.related")}</h2>
+          <ul className="mt-6 grid gap-5 md:grid-cols-3">
+            {related.map((r) => (
+              <li key={r.id}>
+                <Link href={`/article/${r.id}`} data-tilt="5" className="card flex h-full flex-col p-6 transition hover:border-brand-600/40">
+                  <span className="font-semibold leading-snug text-slate-900">{trExact(r.title_i18n, locale) || r.title}</span>
+                  <span className="mt-2 text-sm text-slate-500">{r.authors.map((x) => x.name).join(", ")}</span>
+                  <span className="mt-auto flex flex-wrap gap-1.5 pt-4">
+                    {r.shared.map((k) => <span key={k} className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs text-brand-700">{k}</span>)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }
