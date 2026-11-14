@@ -6,11 +6,11 @@
 import * as THREE from "three";
 
 export type SceneMode = "star" | "book" | "stack" | "globe" | "field";
-export type SceneApi = { setMode(m: SceneMode): void; setTheme(light: boolean): void; dispose(): void };
+export type SceneApi = { setMode(m: SceneMode): void; setTheme(light: boolean): void; burst(): void; dispose(): void };
 
 export function createScene(canvas: HTMLCanvasElement): SceneApi {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const noop: SceneApi = { setMode() {}, setTheme() {}, dispose() {} };
+  const noop: SceneApi = { setMode() {}, setTheme() {}, burst() {}, dispose() {} };
   let renderer: THREE.WebGLRenderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" }); } catch { return noop; }
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
@@ -91,6 +91,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
 
   /* ---------- particles */
   const pos = new Float32Array(N * 3);
+  const vel = new Float32Array(N * 3); // short-lived velocity for the scatter burst
   for (let i = 0; i < N; i++) {
     const a = Math.random() * Math.PI * 2, b = Math.acos(rand(-1, 1)), rr = rand(14, 22);
     pos.set([rr * Math.sin(b) * Math.cos(a), rr * Math.sin(b) * Math.sin(a), rr * Math.cos(b) - 6], i * 3);
@@ -176,8 +177,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   layoutGroup();
   window.addEventListener("resize", layoutGroup);
 
+  /** Push every particle outward from the centre; they drift back into the new shape. */
+  function scatter(strength = 1) {
+    if (reduce) return;
+    for (let i = 0; i < N; i++) {
+      const j = i * 3, x = pos[j], y = pos[j + 1], z = pos[j + 2];
+      const len = Math.hypot(x, y, z) || 1, f = (0.08 + Math.random() * 0.16) * strength;
+      vel[j] += (x / len) * f + (Math.random() - 0.5) * 0.06;
+      vel[j + 1] += (y / len) * f + (Math.random() - 0.5) * 0.06;
+      vel[j + 2] += (z / len) * f + Math.random() * 0.05;
+    }
+  }
+
   function setMode(m: string) {
     if (!SHAPES[m] || m === mode) return;
+    scatter(m === "star" ? 1.2 : 0.9);
     mode = m; target = SHAPES[m];
     if (reduce) { pos.set(target); geo.attributes.position.needsUpdate = true; }
   }
@@ -220,7 +234,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       const tz = target[j + 2] + Math.sin(t * 0.4 + sd * 0.7) * wob;
       const dx = pos[j] - mx, dy = pos[j + 1] - my, d2 = dx * dx + dy * dy;
       if (d2 < RAD2) { const d = Math.sqrt(d2) + 1e-4, f = (RAD - d) * 1.6; tx += (dx / d) * f; ty += (dy / d) * f; }
-      pos[j] += (tx - pos[j]) * k; pos[j + 1] += (ty - pos[j + 1]) * k; pos[j + 2] += (tz - pos[j + 2]) * k;
+      pos[j] += (tx - pos[j]) * k + vel[j]; pos[j + 1] += (ty - pos[j + 1]) * k + vel[j + 1]; pos[j + 2] += (tz - pos[j + 2]) * k + vel[j + 2];
+      vel[j] *= 0.9; vel[j + 1] *= 0.9; vel[j + 2] *= 0.9;
     }
     geo.attributes.position.needsUpdate = true;
     for (let p = 0; p < pairs.length; p++) { const s = pairs[p] * 3; linePos[p * 3] = pos[s]; linePos[p * 3 + 1] = pos[s + 1]; linePos[p * 3 + 2] = pos[s + 2]; }
@@ -234,7 +249,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
     group.scale.setScalar(group.scale.x + (pl.s * (1 - fade * 0.15) - group.scale.x) * 0.05);
     const spin = mode === "globe" ? t * 0.15 : 0;
     group.rotation.z = isStar ? t * 0.05 : 0;
-    group.rotation.y = mouse.sx * 0.9 + Math.sin(t * 0.3) * 0.12 + spin + (mode === "book" ? -0.35 : mode === "stack" ? -0.5 : 0);
+    const scrollTurn = isStar ? 0 : Math.min(scrollY / 2500, 1) * 0.9; // inner pages turn slowly as you scroll
+    group.rotation.y = mouse.sx * 0.9 + Math.sin(t * 0.3) * 0.12 + spin + scrollTurn + (mode === "book" ? -0.35 : mode === "stack" ? -0.5 : 0);
     group.rotation.x = -mouse.sy * 0.7 + Math.cos(t * 0.25) * 0.08 + (mode === "book" ? -0.55 : 0);
     const og = pl.o * (1 - fade * 0.55) * (light ? 0.85 : 1);
     mat.uniforms.uOpacity.value += (og - mat.uniforms.uOpacity.value) * 0.05;
@@ -248,6 +264,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   return {
     setMode: (m) => { setMode(m); if (reduce) frame(); },
     setTheme: (l) => { setTheme(l); if (reduce) frame(); },
+    burst: () => scatter(0.5),
     dispose: () => {
       disposed = true; running = false; cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove); document.removeEventListener("pointerleave", onLeave);

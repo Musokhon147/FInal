@@ -22,6 +22,7 @@ export default function SceneCanvas() {
   useEffect(() => {
     let alive = true;
     let observer: MutationObserver | undefined;
+    const onBurst = () => api.current?.burst();
     import("@/lib/scene").then(({ createScene }) => {
       if (!alive || !ref.current) return;
       const s = createScene(ref.current);
@@ -29,12 +30,14 @@ export default function SceneCanvas() {
       s.setMode(modeRef.current);
       const sync = () => s.setTheme(document.documentElement.classList.contains("light"));
       sync();
+      window.addEventListener("scene:burst", onBurst);
       observer = new MutationObserver(sync);
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     });
     return () => {
       alive = false;
       observer?.disconnect();
+      window.removeEventListener("scene:burst", onBurst);
       api.current?.dispose();
       api.current = null;
     };

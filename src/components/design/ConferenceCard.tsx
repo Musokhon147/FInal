@@ -11,7 +11,7 @@ export default function ConferenceCard({ c, locale, note }: { c: Conference; loc
     : new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-GB", { month: "short" }).format(d);
   return (
     <li>
-      <Link href={`/conferences/${c.id}`} className="card group flex h-full gap-5 p-6 transition hover:-translate-y-1 hover:border-brand-600/60">
+      <Link href={`/conferences/${c.id}`} data-tilt="6" className="card group flex h-full gap-5 p-6 transition-[border-color] hover:border-brand-600/60">
         <div className="flex w-20 shrink-0 flex-col items-center justify-center rounded-xl border border-accent/40 bg-accent/10 py-3 text-center">
           <span className="font-serif text-3xl font-light leading-none text-slate-900">{d.getDate()}</span>
           <span className="mt-1 text-xs text-accent">{month} {d.getFullYear()}</span>

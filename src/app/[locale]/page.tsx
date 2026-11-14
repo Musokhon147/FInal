@@ -11,6 +11,7 @@ import ArticleList, { ARTICLE_LIST_SELECT, topicOf, type ListedArticle } from "@
 import IssueCover from "@/components/design/IssueCover";
 import Countdown from "@/components/fx/Countdown";
 import NewsCard from "@/components/design/NewsCard";
+import FoldTitle from "@/components/design/FoldTitle";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
@@ -50,13 +51,12 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       {/* hero — the particle star sits to the right on wide screens */}
       <section className="relative flex min-h-[calc(100vh-7rem)] items-center pb-16 pt-10">
         <div className="max-w-2xl">
-          <h1 className="reveal font-serif text-[clamp(2.75rem,7vw,5.75rem)] font-light leading-[0.98] tracking-[-0.03em] text-slate-900" style={{ animationDelay: ".35s" }}>
-            {tr(journal?.title, locale)}
-          </h1>
+          <FoldTitle text={tr(journal?.title, locale)} delay={0.3}
+            className="font-serif text-[clamp(2.75rem,7vw,5.75rem)] font-light leading-[0.98] tracking-[-0.03em] text-slate-900" />
           <p className="reveal mt-7 max-w-xl text-lg leading-relaxed text-slate-600" style={{ animationDelay: ".55s" }}>{tr(journal?.description, locale)}</p>
           <div className="reveal mt-9 flex flex-wrap gap-3" style={{ animationDelay: ".7s" }}>
-            <Link href="/dashboard/submit" className="btn-gold px-7 py-3 text-base">{t("home.cta")}</Link>
-            {issue && <Link href={`/issue/${issue.id}`} className="btn-secondary px-7 py-3 text-base">{t("nav.current")}</Link>}
+            <Link href="/dashboard/submit" data-magnetic className="btn-gold px-7 py-3 text-base">{t("home.cta")}</Link>
+            {issue && <Link href={`/issue/${issue.id}`} data-magnetic className="btn-secondary px-7 py-3 text-base">{t("nav.current")}</Link>}
           </div>
           <dl className="reveal mt-14 flex flex-wrap gap-x-10 gap-y-4 text-sm" style={{ animationDelay: ".9s" }}>
             <div><dt className="text-slate-500">{t("x.langsLabel")}</dt><dd className="mt-1 text-slate-900">O&apos;zbek, Русский, English</dd></div>
@@ -67,7 +67,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       {!!journal?.indexes?.length && (
-        <section className="py-6">
+        <section data-reveal className="py-6">
           <h2 className="text-sm font-medium text-slate-500">{t("x.indexedIn")}</h2>
           <ul className="mt-5 flex flex-wrap items-center gap-x-10 gap-y-4">
             {journal.indexes.map((n) => <li key={n} className="font-serif text-lg text-slate-600 transition hover:text-slate-900 sm:text-xl">{n}</li>)}
@@ -76,7 +76,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       )}
 
       {issue && (
-        <section id="current" className="scroll-mt-24 py-12">
+        <section data-reveal id="current" className="scroll-mt-24 py-12">
           <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
             <div className="lg:sticky lg:top-28 lg:self-start">
               <Link href={`/issue/${issue.id}`} className="block">
@@ -93,7 +93,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       )}
 
       {cfpEnd && (
-        <section className="py-6">
+        <section data-reveal className="py-6">
           <div className="card relative overflow-hidden border-accent/40 p-8 sm:p-10">
             <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" aria-hidden="true" />
             <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
@@ -113,7 +113,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </section>
       )}
 
-      <section className="py-12">
+      <section data-reveal className="py-12">
         <h2 className="text-3xl sm:text-4xl">{t("x.numbersTitle")}</h2>
         <dl className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {figures.map(([n, suf, label]) => (
@@ -126,7 +126,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </dl>
       </section>
 
-      <section className="py-12">
+      <section data-reveal className="py-12">
         <h2 className="max-w-xl text-3xl leading-tight sm:text-4xl">{t("x.howTitle")}</h2>
         <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map(([h, p], i) => (
@@ -144,7 +144,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       {news.length > 0 && (
-        <section className="py-12">
+        <section data-reveal className="py-12">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-3xl sm:text-4xl">{t("x.news")}</h2>
             <Link href="/news" className="text-sm font-semibold text-brand-700 hover:underline">{t("x.allNews")}</Link>

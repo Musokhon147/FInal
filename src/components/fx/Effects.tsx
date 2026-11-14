@@ -24,6 +24,7 @@ export default function Effects() {
           const el = e.target as HTMLElement;
           io?.unobserve(el);
           if (el.classList.contains("step")) el.classList.add("is-on");
+          if (el.hasAttribute("data-reveal")) el.classList.add("is-in");
           if (el.dataset.count && !reduce) {
             const to = Number(el.dataset.count), t0 = performance.now();
             const tick = (now: number) => {
@@ -36,7 +37,7 @@ export default function Effects() {
           }
         }), { threshold: 0.4 })
       : null;
-    document.querySelectorAll(".step, [data-count]").forEach((el) => (io ? io.observe(el) : el.classList.add("is-on")));
+    document.querySelectorAll(".step, [data-count], [data-reveal]").forEach((el) => (io ? io.observe(el) : el.classList.add("is-on", "is-in")));
 
     const readBar = () => {
       const bar = document.getElementById("readbar"), body = document.getElementById("article-body");
@@ -50,16 +51,37 @@ export default function Effects() {
   }, [pathname]);
 
   useEffect(() => {
-    let current: HTMLElement | null = null;
+    let current: HTMLElement | null = null, magnet: HTMLElement | null = null;
     const move = (e: PointerEvent) => {
       if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      const el = (e.target as Element)?.closest?.(".tilt") as HTMLElement | null;
+      const target = e.target as Element;
+
+      // light that follows the cursor on cards
+      const card = target?.closest?.(".card") as HTMLElement | null;
+      if (card) {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        card.style.setProperty("--my", `${e.clientY - r.top}px`);
+      }
+
+      // buttons that lean toward the cursor
+      const m = target?.closest?.("[data-magnetic]") as HTMLElement | null;
+      if (magnet && magnet !== m) magnet.style.transform = "";
+      magnet = m;
+      if (m) {
+        const r = m.getBoundingClientRect();
+        m.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.18}px, ${(e.clientY - r.top - r.height / 2) * 0.28}px)`;
+      }
+
+      // 3D tilt: covers (.tilt, strong) and cards ([data-tilt], gentle)
+      const el = target?.closest?.(".tilt, [data-tilt]") as HTMLElement | null;
       if (current && current !== el) { current.style.transform = ""; current.style.boxShadow = ""; }
       current = el;
       if (!el) return;
+      const deg = Number(el.dataset.tilt || 18);
       const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-      el.style.transform = `perspective(700px) rotateY(${x * 18}deg) rotateX(${-y * 18}deg) scale(1.03)`;
-      el.style.boxShadow = `${-x * 24}px ${24 - y * 10}px 40px -14px rgb(var(--b600) / 0.45)`;
+      el.style.transform = `perspective(800px) rotateY(${x * deg}deg) rotateX(${-y * deg}deg) scale(${deg > 10 ? 1.03 : 1.01})`;
+      el.style.boxShadow = `${-x * 24}px ${24 - y * 10}px 40px -16px rgb(var(--b600) / 0.4)`;
     };
     document.addEventListener("pointermove", move);
     return () => document.removeEventListener("pointermove", move);

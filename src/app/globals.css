@@ -110,7 +110,49 @@ html.light {
   .step-ind.is-done .step-fill { width: 100%; }
   .step-ind.is-current > span:last-child { color: rgb(var(--s900)); font-weight: 600; }
 
+  /* hero letters fold up from the baseline */
+  .fold-letter { display: inline-block; transform-origin: 50% 100%; transform: rotateX(-95deg) translateY(0.15em); opacity: 0; animation: fold 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+  @keyframes fold { to { transform: none; opacity: 1; } }
+
+  /* soft light following the cursor across cards */
+  .card { position: relative; }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 0.35s ease;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--b600) / 0.1), transparent 60%);
+  }
+  .card:hover::before { opacity: 1; }
+
+  /* sections rise into view, tilted slightly back */
+  [data-reveal] { opacity: 0; transform: perspective(1000px) rotateX(10deg) translateY(36px); transform-origin: 50% 0; transition: opacity 0.9s ease, transform 1s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  [data-reveal].is-in { opacity: 1; transform: none; }
+
+  [data-magnetic] { transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1); will-change: transform; }
+
+  /* skeleton: tile-coloured sheen sweeping across */
+  .skel { position: relative; overflow: hidden; background: rgb(var(--s200) / 0.55); }
+  .skel::after {
+    content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(100deg, transparent 20%, rgb(var(--b600) / 0.16) 45%, rgb(var(--acc) / 0.14) 55%, transparent 80%);
+    animation: sheen 1.6s ease-in-out infinite;
+  }
+  @keyframes sheen { to { transform: translateX(100%); } }
+
+  /* navigation progress line with a star at its head */
+  .nav-progress { position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 70; pointer-events: none; opacity: 0; transition: opacity 0.3s ease 0.15s; }
+  .nav-progress-bar { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, rgb(var(--b600)), rgb(var(--acc))); box-shadow: 0 0 12px rgb(var(--acc) / 0.8); }
+  .nav-progress-star { position: absolute; right: -7px; top: -5.5px; filter: drop-shadow(0 0 6px rgb(var(--acc))); animation: spin 1.2s linear infinite; }
+  .nav-progress.is-loading { opacity: 1; transition: none; }
+  .nav-progress.is-loading .nav-progress-bar { animation: crawl 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+  .nav-progress.is-done { opacity: 0; }
+  .nav-progress.is-done .nav-progress-bar { width: 100%; transition: width 0.2s ease; }
+  @keyframes crawl { from { width: 0; } 15% { width: 35%; } 50% { width: 70%; } to { width: 92%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   @media (prefers-reduced-motion: reduce) {
+    .skel::after, .nav-progress-star { animation: none; }
+    .fold-letter { animation: none; opacity: 1; transform: none; }
+    [data-reveal] { opacity: 1; transform: none; transition: none; }
+    .card::before { display: none; }
     .reveal, .page-enter, .chart-bar, .chart-hbar { animation: none; opacity: 1; transform: none; }
     .step { opacity: 1; transform: none; }
   }

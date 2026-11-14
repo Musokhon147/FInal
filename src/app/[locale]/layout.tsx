@@ -8,6 +8,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SceneCanvas from "@/components/fx/SceneCanvas";
 import Effects from "@/components/fx/Effects";
+import NavProgress from "@/components/fx/NavProgress";
+import ClickSparks from "@/components/fx/ClickSparks";
+import { Suspense } from "react";
 import { THEME_SCRIPT } from "@/components/fx/ThemeToggle";
 import { getJournal } from "@/lib/data";
 import { tr } from "@/lib/i18n-field";
@@ -45,7 +48,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       </head>
       <body className="min-h-screen">
         <NextIntlClientProvider>
+          <Suspense fallback={null}><NavProgress /></Suspense>
           <SceneCanvas />
+          <ClickSparks />
           <Effects />
           <div className="relative z-10 flex min-h-screen flex-col">
             {IS_DEMO && (
