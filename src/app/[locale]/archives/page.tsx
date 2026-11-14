@@ -22,6 +22,7 @@ type Row = {
 export default async function ArchivesPage({ params }: PageProps<"/[locale]/archives">) {
   const locale = await initLocale(params);
   const t = await getTranslations("archives");
+  const tx = await getTranslations("x");
   const supabase = await createClient();
   const { data } = await supabase
     .from("volumes")
@@ -33,13 +34,16 @@ export default async function ArchivesPage({ params }: PageProps<"/[locale]/arch
 
   return (
     <div>
-      <h1 className="text-4xl font-light sm:text-5xl">{t("title")}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-4xl font-light sm:text-5xl">{t("title")}</h1>
+        <Link href="/explore" className="btn-secondary">{tx("exploreLink")}</Link>
+      </div>
       {!volumes.length && <p className="mt-6 text-slate-500">{t("empty")}</p>}
       <div className="mt-12 space-y-14">
         {volumes.map((v) => (
           <section key={v.id}>
             <h2 className="mb-6 border-b border-slate-200 pb-3 text-xl">{t("volume", { n: v.number, year: v.year })}</h2>
-            <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            <ul className="grid grid-cols-2 gap-x-8 gap-y-10 px-2 sm:grid-cols-3 lg:grid-cols-5">
               {v.issues.map((i) => (
                 <li key={i.id}>
                   <Link href={`/issue/${i.id}`} className="group block">
@@ -51,6 +55,7 @@ export default async function ArchivesPage({ params }: PageProps<"/[locale]/arch
                 </li>
               ))}
             </ul>
+            <div className="shelf mt-4" aria-hidden="true" />
           </section>
         ))}
       </div>

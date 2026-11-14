@@ -5,6 +5,8 @@ import { alternates } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { tr } from "@/lib/i18n-field";
 import type { BoardMember } from "@/lib/types";
+import { COUNTRY_LATLON, countryOf } from "@/lib/data";
+import AuthorsGlobe, { type GlobePoint } from "@/components/fx/AuthorsGlobe";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("board");
@@ -34,6 +36,17 @@ export default async function BoardPage({ params }: PageProps<"/[locale]/board">
   const supabase = await createClient();
   const { data } = await supabase.from("editorial_board").select("*").order("sort_order");
   const list = (data ?? []) as BoardMember[];
+  // where our authors work: every author of every published article
+  const { data: arts } = await supabase.from("articles").select("authors").eq("status", "published");
+  const byCountry: Record<string, GlobePoint> = {};
+  ((arts ?? []) as { authors: { affiliation?: string }[] }[]).forEach((a) => a.authors.forEach((au) => {
+    const c = countryOf(au.affiliation, locale);
+    const ll = c && COUNTRY_LATLON[c.key];
+    if (!c || !ll) return;
+    byCountry[c.key] = byCountry[c.key] || { label: c.label, lat: ll[0], lon: ll[1], count: 0 };
+    byCountry[c.key].count++;
+  }));
+  const points = Object.values(byCountry).sort((a, b) => b.count - a.count);
   const grp = (k: BoardMember["position_type"]) => list.filter((m) => (m.position_type || "member") === k);
   const person = (m: BoardMember) => (
     <li key={m.id} className="card flex items-center gap-4 p-5 transition duration-300 hover:-translate-y-1 hover:border-brand-600/60">
@@ -60,6 +73,24 @@ export default async function BoardPage({ params }: PageProps<"/[locale]/board">
       ))}
       {grp("deputy").length > 0 && <><h2 className="mt-12 text-xl">{t("x.g_deputy")}</h2><ul className="mt-5 grid gap-4 sm:grid-cols-2">{grp("deputy").map(person)}</ul></>}
       {grp("member").length > 0 && <><h2 className="mt-12 text-xl">{t("x.g_member")}</h2><ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{grp("member").map(person)}</ul></>}
+
+      {points.length > 0 && (
+        <section data-reveal className="card mt-16 grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_280px] lg:items-center">
+          <AuthorsGlobe points={points} />
+          <div>
+            <h2 className="text-2xl">{t("x.authorsWorld")}</h2>
+            <p className="mt-3 text-sm text-slate-600">{t("x.authorsWorldText")}</p>
+            <ul className="mt-6 space-y-2 text-sm">
+              {points.map((p) => (
+                <li key={p.label} className="flex items-center justify-between gap-4 border-b border-slate-200 pb-2">
+                  <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />{p.label}</span>
+                  <span className="tabular-nums text-slate-500">{p.count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

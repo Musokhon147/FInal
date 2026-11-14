@@ -382,6 +382,14 @@
     "startDate": "Boshlanish sanasi",
     "endDate": "Tugash sanasi",
     "daysLeft": "Ro'yxatdan o'tishga {n} kun qoldi",
-    "proceedingsSoon": "Materiallar konferensiyadan keyin nashr etiladi."
+    "proceedingsSoon": "Materiallar konferensiyadan keyin nashr etiladi.",
+    "authorsWorld": "Mualliflarimiz dunyo bo'ylab",
+    "authorsWorldText": "Har bir nuqta maqola mualliflari ishlaydigan mamlakat. Globusni aylantirish uchun suring.",
+    "dragHint": "Aylantirish uchun suring",
+    "articlesN": "{n} ta maqola",
+    "explore": "Maqolalar xaritasi",
+    "exploreText": "Har bir nuqta — maqola. Umumiy kalit so'zlarga ega maqolalar chiziq bilan bog'langan. Aylantiring, yaqinlashtiring va ochish uchun bosing.",
+    "exploreLink": "Maqolalar xaritasini ochish",
+    "sharedKeywords": "Umumiy kalit so'zlar"
   }
 }

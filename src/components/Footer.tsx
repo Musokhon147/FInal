@@ -20,6 +20,7 @@ export default async function Footer() {
           <li><Link href="/board" className="navlink">{t("nav.board")}</Link></li>
           <li><Link href="/news" className="navlink">{t("nav.news")}</Link></li>
           <li><Link href="/conferences" className="navlink">{t("nav.conferences")}</Link></li>
+          <li><Link href="/explore" className="navlink">{t("x.explore")}</Link></li>
           {pages.map((p) => <li key={p.id}><Link href={`/p/${p.slug}`} className="navlink">{tr(p.title, locale)}</Link></li>)}
         </ul>
         <div className="space-y-2 text-sm text-slate-500">

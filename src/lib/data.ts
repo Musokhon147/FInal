@@ -44,6 +44,12 @@ const COUNTRIES: Record<string, { uz: string; ru: string; en: string; a: string[
   KR: { uz: "Koreya", ru: "Корея", en: "Korea", a: ["koreya", "korea", "south korea", "корея"] },
   DE: { uz: "Germaniya", ru: "Германия", en: "Germany", a: ["germaniya", "germany", "германия"] },
 };
+/** Approximate centre of each country, for the authors globe. */
+export const COUNTRY_LATLON: Record<string, [number, number]> = {
+  UZ: [41.4, 64.6], KZ: [48.0, 67.0], KG: [41.2, 74.8], TJ: [38.9, 71.3], TM: [39.0, 59.6],
+  RU: [56.0, 60.0], TR: [39.0, 35.2], KR: [36.5, 127.8], DE: [51.2, 10.4],
+};
+
 export function countryOf(aff: string | null | undefined, locale: string) {
   const raw = (aff || "").split(",").pop()?.trim();
   if (!raw) return null;

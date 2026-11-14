@@ -26,6 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/board", null, 0.5),
     entry("/news", null, 0.5),
     entry("/conferences", null, 0.6),
+    entry("/explore", null, 0.4),
     ...((issues ?? []) as { id: string; published_at: string | null }[]).map((i) => entry(`/issue/${i.id}`, i.published_at, 0.7)),
     ...((articles ?? []) as { id: string; published_at: string | null; updated_at?: string }[]).map((a) => entry(`/article/${a.id}`, a.updated_at ?? a.published_at, 0.9)),
     ...((news ?? []) as { id: string; date: string }[]).map((n) => entry(`/news/${n.id}`, n.date, 0.4)),

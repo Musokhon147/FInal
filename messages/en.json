@@ -382,6 +382,14 @@
     "startDate": "Start date",
     "endDate": "End date",
     "daysLeft": "{n} days left to register",
-    "proceedingsSoon": "Proceedings will be published after the conference."
+    "proceedingsSoon": "Proceedings will be published after the conference.",
+    "authorsWorld": "Our authors around the world",
+    "authorsWorldText": "Each point is a country where our authors work. Drag to turn the globe.",
+    "dragHint": "Drag to turn",
+    "articlesN": "{n} articles",
+    "explore": "Article map",
+    "exploreText": "Each point is an article. Articles that share keywords are joined by lines. Turn, zoom and click a point to open it.",
+    "exploreLink": "Open the article map",
+    "sharedKeywords": "Shared keywords"
   }
 }

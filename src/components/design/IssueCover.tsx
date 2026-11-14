@@ -11,7 +11,12 @@ export default function IssueCover({
   const big = size === "lg";
   return (
     <ViewTransition name={`cover-${pid}`} share="morph" default="none">
-    <div className="tilt relative aspect-[3/4] w-full overflow-hidden rounded-xl ring-1 ring-white/10" style={{ background: bg }}>
+    <div className="book">
+    <div className="book-3d">
+    {/* spine and page edges make the cover a real 3D book */}
+    <span className="book-spine" style={{ background: `linear-gradient(90deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))` }} aria-hidden="true" />
+    <span className="book-pages" aria-hidden="true" />
+    <div className="book-front relative aspect-[3/4] w-full overflow-hidden rounded-r-xl rounded-l-sm ring-1 ring-white/10" style={{ background: bg }}>
       {topic && <p className="absolute left-4 right-4 top-4 z-10 text-xs leading-snug text-[#cdd5e8]">{topic}</p>}
       <svg className="absolute inset-0 h-full w-full opacity-60" aria-hidden="true">
         <defs>
@@ -30,6 +35,9 @@ export default function IssueCover({
         <p className={`font-serif font-light leading-none ${big ? "text-5xl" : "text-3xl"}`} style={{ color: fg }}>{isSpecial ? `S${number}` : number}</p>
         <p className="mt-2 text-xs text-[#cdd5e8]">{volumeLabel}</p>
       </div>
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/35 to-transparent" aria-hidden="true" />
+    </div>
+    </div>
     </div>
     </ViewTransition>
   );
