@@ -335,6 +335,12 @@
     "n_status": "“{title}” is now: {status}",
     "n_invite": "Review request: “{title}”",
     "n_review": "Review completed: “{title}”",
-    "n_new": "New manuscript: “{title}”"
+    "n_new": "New manuscript: “{title}”",
+    "notFoundTitle": "Page not found",
+    "notFoundText": "This address doesn't exist or the page was removed. Go back home or search the articles.",
+    "errorTitle": "Something went wrong",
+    "errorText": "The page couldn't load. Try again.",
+    "retry": "Try again",
+    "goHome": "Go home"
   }
 }

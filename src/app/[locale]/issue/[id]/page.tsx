@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
+import { cleanHtml } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, tr } from "@/lib/i18n-field";
 import { issueLabel } from "@/lib/issue-label";
@@ -65,7 +66,7 @@ export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[
           </p>
         )}
         {tr(issue.description, locale) && (
-          <div className="prose-content mt-4 text-slate-700" dangerouslySetInnerHTML={{ __html: tr(issue.description, locale) }} />
+          <div className="prose-content mt-4 text-slate-700" dangerouslySetInnerHTML={{ __html: cleanHtml(tr(issue.description, locale)) }} />
         )}
         <h2 className="mt-8 border-b border-slate-200 pb-2 text-xl">{t("issue.articles")}</h2>
         <ArticleList articles={(articles ?? []) as unknown as ListedArticle[]} />

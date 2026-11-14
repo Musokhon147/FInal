@@ -4,6 +4,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
 import { getSession } from "@/lib/auth";
 import I18nFields from "@/components/admin/I18nFields";
+import RichI18nFields from "@/components/admin/RichI18nFields";
 import type { CmsPage } from "@/lib/types";
 import { savePage } from "../../actions";
 
@@ -40,7 +41,7 @@ export default async function EditPage({ params }: PageProps<"/[locale]/admin/pa
           </div>
         </div>
         <I18nFields name="title" label={t("common.title")} value={page?.title} required />
-        <I18nFields name="body" label={t("admin.body")} value={page?.body} multiline />
+        <RichI18nFields name="body" label={t("admin.body")} value={page?.body} />
         <button className="btn-primary">{t("common.save")}</button>
       </form>
     </div>

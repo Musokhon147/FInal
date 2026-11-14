@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession, isStaff } from "@/lib/auth";
 import type { AppRole, SubmissionStatus } from "@/lib/types";
+import { cleanI18nHtml } from "@/lib/sanitize";
 
 async function staff() {
   const s = await getSession();
@@ -208,7 +209,7 @@ export async function savePage(formData: FormData) {
   const row = {
     slug: str(formData, "slug").toLowerCase().replace(/[^a-z0-9-]+/g, "-"),
     title: i18n(formData, "title"),
-    body: i18n(formData, "body"),
+    body: cleanI18nHtml(i18n(formData, "body")),
     is_published: formData.get("is_published") === "on",
     show_in_menu: formData.get("show_in_menu") === "on",
     sort_order: int(formData, "sort_order") ?? 0,
@@ -264,7 +265,7 @@ export async function deleteMember(id: string) {
 export async function saveNews(formData: FormData) {
   const { supabase } = await staff();
   const id = str(formData, "id");
-  const row = { date: str(formData, "date"), pinned: formData.get("pinned") === "on", title: i18n(formData, "title"), body: i18n(formData, "body") };
+  const row = { date: str(formData, "date"), pinned: formData.get("pinned") === "on", title: i18n(formData, "title"), body: cleanI18nHtml(i18n(formData, "body")) };
   const { error } = id ? await supabase.from("news").update(row).eq("id", id) : await supabase.from("news").insert(row);
   if (error) throw new Error(error.message);
   done();

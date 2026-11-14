@@ -4,6 +4,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
 import { getSession } from "@/lib/auth";
 import I18nFields from "@/components/admin/I18nFields";
+import RichI18nFields from "@/components/admin/RichI18nFields";
 import type { NewsItem } from "@/lib/types";
 import { deleteNews, saveNews } from "../../actions";
 
@@ -39,7 +40,7 @@ export default async function EditNews({ params }: PageProps<"/[locale]/admin/ne
           <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="pinned" defaultChecked={item?.pinned} /> {t("x.pinned")}</label>
         </div>
         <I18nFields name="title" label={t("common.title")} value={item?.title} required />
-        <I18nFields name="body" label={t("admin.body")} value={item?.body} multiline />
+        <RichI18nFields name="body" label={t("admin.body")} value={item?.body} />
         <div className="flex flex-wrap gap-3">
           <button className="btn-primary">{t("common.save")}</button>
           {item && <button formAction={remove} formNoValidate className="btn-secondary text-red-400">{t("common.delete")}</button>}

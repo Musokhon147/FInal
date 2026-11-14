@@ -56,6 +56,8 @@ html.light {
   .prose-content ul { @apply mb-4 list-disc space-y-1 pl-6 text-slate-700; }
   .prose-content ol { @apply mb-4 list-decimal space-y-1 pl-6 text-slate-700; }
   .prose-content a { @apply text-brand-700 underline; }
+  .prose-content blockquote { @apply my-4 border-l-2 border-accent pl-4 text-slate-600 italic; }
+  .prose-content img { @apply my-4 max-w-full rounded-lg; }
 
   .input { @apply w-full rounded-lg border border-slate-300 bg-slate-100/70 px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30; }
   .input option { background: rgb(var(--s100)); }
