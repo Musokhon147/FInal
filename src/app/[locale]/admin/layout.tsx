@@ -6,6 +6,7 @@ import { getSession, isStaff } from "@/lib/auth";
 export default async function AdminLayout({ children, params }: LayoutProps<"/[locale]/admin">) {
   const locale = await initLocale(params);
   const t = await getTranslations("admin");
+  const tn = await getTranslations();
   const { user, profile } = await getSession();
   if (!user) redirect({ href: "/login?next=/admin", locale });
   if (!isStaff(profile)) redirect({ href: "/dashboard", locale });
@@ -16,7 +17,9 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
     ["/admin/issues", t("issues")],
     ["/admin/articles", t("articles")],
     ["/admin/pages", t("pages")],
-    ...(profile?.role === "admin" ? [["/admin/users", t("users")]] : []),
+    ["/admin/board", tn("nav.board")],
+    ["/admin/news", tn("x.news")],
+    ...(profile?.role === "admin" ? [["/admin/users", t("users")], ["/admin/settings", tn("x.settings")]] : []),
   ];
 
   return (

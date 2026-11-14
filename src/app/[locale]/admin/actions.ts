@@ -219,3 +219,59 @@ export async function savePage(formData: FormData) {
   if (error) throw new Error(error.message);
   done();
 }
+
+/* ---------- journal settings (admin) */
+export async function saveSettings(input: {
+  title: Record<string, string>; description: Record<string, string>; issn_online: string; publisher: string;
+  contact_email: string; indexes: string[]; cfp_deadline: string | null; cfp_text: Record<string, string>; logo_url?: string | null;
+}) {
+  const { supabase, profile } = await staff();
+  if (profile?.role !== "admin") throw new Error("Forbidden");
+  const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
+  const row: Record<string, unknown> = { ...input };
+  if (input.logo_url === undefined) delete row.logo_url;
+  const { error } = await supabase.from("journals").update(row).eq("id", j!.id);
+  if (error) throw new Error(error.message);
+  done();
+}
+
+/* ---------- editorial board */
+export async function saveMember(id: string | null, input: {
+  full_name: Record<string, string>; position: Record<string, string>; affiliation: Record<string, string>;
+  position_type: "chief" | "deputy" | "member"; sort_order: number; photo_url?: string | null;
+}) {
+  const { supabase } = await staff();
+  const row: Record<string, unknown> = { ...input };
+  if (input.photo_url === undefined) delete row.photo_url;
+  if (id) {
+    const { error } = await supabase.from("editorial_board").update(row).eq("id", id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
+    const { error } = await supabase.from("editorial_board").insert({ ...row, journal_id: j?.id });
+    if (error) throw new Error(error.message);
+  }
+  done();
+}
+
+export async function deleteMember(id: string) {
+  const { supabase } = await staff();
+  await supabase.from("editorial_board").delete().eq("id", id);
+  done();
+}
+
+/* ---------- news */
+export async function saveNews(formData: FormData) {
+  const { supabase } = await staff();
+  const id = str(formData, "id");
+  const row = { date: str(formData, "date"), pinned: formData.get("pinned") === "on", title: i18n(formData, "title"), body: i18n(formData, "body") };
+  const { error } = id ? await supabase.from("news").update(row).eq("id", id) : await supabase.from("news").insert(row);
+  if (error) throw new Error(error.message);
+  done();
+}
+
+export async function deleteNews(id: string) {
+  const { supabase } = await staff();
+  await supabase.from("news").delete().eq("id", id);
+  done();
+}
