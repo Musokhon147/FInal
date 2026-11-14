@@ -30,12 +30,12 @@ export default async function AdminSubmissions({ params, searchParams }: PagePro
     <div className="card">
       <h1 className="mb-4 text-2xl">{t("admin.submissions")}</h1>
       <div className="mb-4 flex flex-wrap gap-2 text-sm">
-        <Link href="/admin/submissions" className={`rounded-full px-3 py-1 ${!filter ? "bg-brand-600 text-white" : "bg-slate-100"}`}>
+        <Link href="/admin/submissions" className={`rounded-full px-3 py-1 ${!filter ? "bg-brand-600 text-ink" : "bg-slate-100"}`}>
           {t("admin.filterAll")}
         </Link>
         {SUBMISSION_STATUSES.filter((s) => s !== "draft").map((s) => (
           <Link key={s} href={`/admin/submissions?status=${s}`}
-            className={`rounded-full px-3 py-1 ${filter === s ? "bg-brand-600 text-white" : "bg-slate-100"}`}>
+            className={`rounded-full px-3 py-1 ${filter === s ? "bg-brand-600 text-ink" : "bg-slate-100"}`}>
             {t(`status.${s}`)}
           </Link>
         ))}

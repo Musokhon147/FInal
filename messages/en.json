@@ -12,7 +12,8 @@
     "register": "Register",
     "dashboard": "My account",
     "admin": "Admin panel",
-    "logout": "Log out"
+    "logout": "Log out",
+    "news": "News"
   },
   "common": {
     "save": "Save",
@@ -249,5 +250,91 @@
     "author": "Author",
     "reviewer": "Reviewer",
     "admin": "Admin / editor"
+  },
+  "x": {
+    "fileNote": "Files aren't stored in demo mode. Real files will download here once Supabase is connected.",
+    "saved": "Saved",
+    "submitted": "Article submitted",
+    "needLogin": "Please log in first",
+    "heroKicker": "An international, peer-reviewed, open-access journal",
+    "langsLabel": "Publication languages",
+    "published": "Published articles",
+    "howTitle": "How an article gets published",
+    "steps": [
+      [
+        "Submit",
+        "Send your manuscript online and follow every stage in your account."
+      ],
+      [
+        "Peer review",
+        "Two independent reviewers assess it double-blind, usually in 3–4 weeks."
+      ],
+      [
+        "Decision",
+        "The editor tells you: accept, revise or reject."
+      ],
+      [
+        "Publish",
+        "Your article goes live open access with a DOI and joins the archive."
+      ]
+    ],
+    "onPage": "On this page",
+    "pdfPreview": "PDF preview",
+    "openPdf": "Open full PDF",
+    "copy": "Copy",
+    "copied": "Copied",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode",
+    "settings": "Settings",
+    "logo": "Logo",
+    "removeLogo": "Remove logo",
+    "contactEmail": "Contact email",
+    "photo": "Photo",
+    "group": "Group",
+    "addMember": "Add member",
+    "deleted": "Deleted",
+    "g_chief": "Editor-in-chief",
+    "g_deputy": "Deputy editors",
+    "g_member": "Board members",
+    "logoHint": "PNG, JPG or SVG, up to 300 KB",
+    "indexedIn": "Indexed in",
+    "indexesField": "Indexing databases (comma-separated)",
+    "numbersTitle": "The journal in numbers",
+    "nArticles": "published articles",
+    "nCountries": "countries of authors",
+    "nDays": "days — average time to a decision",
+    "nRate": "acceptance rate",
+    "cfpTitle": "Now accepting papers for the next issue",
+    "cfpDeadline": "Deadline",
+    "cfpText": "Call text",
+    "cfpClosed": "Submissions closed",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "min",
+    "seconds": "sec",
+    "news": "News",
+    "allNews": "All news",
+    "readMore": "Read more",
+    "addNews": "Add news",
+    "pinned": "Pin to top",
+    "date": "Date",
+    "perMonth": "Submissions per month",
+    "byCountry": "Articles by country",
+    "byStatus": "Manuscripts by status",
+    "reviewTime": "Average time to decision",
+    "stepDetails": "Article",
+    "stepAuthors": "Authors",
+    "stepFiles": "File",
+    "stepConfirm": "Review",
+    "next": "Next",
+    "prev": "Back",
+    "stepOf": "Step {n} of {total}",
+    "notifications": "Notifications",
+    "markAll": "Mark all as read",
+    "noNotif": "No new notifications",
+    "n_status": "“{title}” is now: {status}",
+    "n_invite": "Review request: “{title}”",
+    "n_review": "Review completed: “{title}”",
+    "n_new": "New manuscript: “{title}”"
   }
 }

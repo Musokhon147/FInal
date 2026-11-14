@@ -76,7 +76,7 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
                     </Link>
                   </td>
                   <td>
-                    <span className={i.status === "published" ? "text-emerald-700" : "text-slate-500"}>
+                    <span className={i.status === "published" ? "text-brand-700" : "text-slate-500"}>
                       {i.status === "published" ? t("admin.isPublished") : "Draft"}
                     </span>
                     {i.published_at && <span className="block text-xs text-slate-400">{formatDate(i.published_at, locale)}</span>}

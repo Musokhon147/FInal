@@ -33,7 +33,7 @@ export default async function AdminHome({ params }: PageProps<"/[locale]/admin">
         {stats.map(([label, n, href]) => (
           <Link key={label} href={href} className="card hover:border-brand-600">
             <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-1 font-serif text-4xl text-brand-900">{n}</p>
+            <p className="mt-1 font-serif text-4xl text-slate-900">{n}</p>
           </Link>
         ))}
       </div>

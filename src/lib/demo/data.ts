@@ -32,6 +32,14 @@ export function createSeed(): DemoDb {
       en: "An international peer-reviewed scientific journal. All articles are open access: free to read and download.",
     },
     issn_print: null, issn_online: "0000-0000", publisher: "[Publisher name]", cover_url: null, apc_amount: 300000, apc_currency: "UZS",
+    logo_url: null, contact_email: "editor@example.uz",
+    indexes: ["Google Scholar", "Crossref", "OpenAlex", "BASE", "ROAD", "CyberLeninka"],
+    cfp_deadline: "2026-12-20",
+    cfp_text: {
+      uz: "4-son (dekabr 2026) uchun iqtisodiyot, ta'lim va raqamli texnologiyalar bo'yicha maqolalar qabul qilinadi.",
+      ru: "Принимаются статьи в выпуск 4 (декабрь 2026) по экономике, образованию и цифровым технологиям.",
+      en: "Papers on economics, education and digital technology are welcome for Issue 4 (December 2026).",
+    },
   }];
 
   const sections = [
@@ -208,22 +216,58 @@ export function createSeed(): DemoDb {
   ];
 
   const editorial_board = [
-    { id: "eb-1", journal_id: J, sort_order: 1, photo_url: null, email: null, orcid: null,
+    { id: "eb-1", journal_id: J, sort_order: 1, position_type: "chief", photo_url: null, email: null, orcid: null,
       full_name: { uz: "Abdullayev Jamshid", ru: "Абдуллаев Джамшид", en: "Jamshid Abdullayev" },
       position: { uz: "Bosh muharrir", ru: "Главный редактор", en: "Editor-in-Chief" },
       affiliation: { uz: "i.f.d., professor, Toshkent", ru: "д.э.н., профессор, Ташкент", en: "DSc (Economics), Professor, Tashkent" } },
-    { id: "eb-2", journal_id: J, sort_order: 2, photo_url: null, email: null, orcid: null,
+    { id: "eb-2", journal_id: J, sort_order: 2, position_type: "deputy", photo_url: null, email: null, orcid: null,
       full_name: { uz: "Sobirova Gulnora", ru: "Собирова Гульнора", en: "Gulnora Sobirova" },
       position: { uz: "Bosh muharrir o'rinbosari", ru: "Заместитель главного редактора", en: "Deputy Editor" },
       affiliation: { uz: "PhD, dotsent, Samarqand", ru: "PhD, доцент, Самарканд", en: "PhD, Associate Professor, Samarkand" } },
-    { id: "eb-3", journal_id: J, sort_order: 3, photo_url: null, email: null, orcid: null,
+    { id: "eb-3", journal_id: J, sort_order: 3, position_type: "member", photo_url: null, email: null, orcid: null,
       full_name: { uz: "Maria Schmidt", ru: "Мария Шмидт", en: "Maria Schmidt" },
       position: { uz: "Tahrir hay'ati a'zosi", ru: "Член редколлегии", en: "Editorial Board Member" },
       affiliation: { uz: "PhD, Berlin, Germaniya", ru: "PhD, Берлин, Германия", en: "PhD, Berlin, Germany" } },
+    ...[
+      ["eb-4", "deputy", 2, ["Rahmonov Otabek", "Рахмонов Отабек", "Otabek Rakhmonov"], ["Bosh muharrir o'rinbosari", "Заместитель главного редактора", "Deputy Editor"], ["DSc, professor, Toshkent", "DSc, профессор, Ташкент", "DSc, Professor, Tashkent"]],
+      ["eb-5", "member", 4, ["Kim Yuna", "Ким Юна", "Yuna Kim"], ["Tahrir hay'ati a'zosi", "Член редколлегии", "Editorial Board Member"], ["PhD, Seul, Koreya", "PhD, Сеул, Корея", "PhD, Seoul, Korea"]],
+      ["eb-6", "member", 5, ["Nazarova Feruza", "Назарова Феруза", "Feruza Nazarova"], ["Tahrir hay'ati a'zosi", "Член редколлегии", "Editorial Board Member"], ["PhD, dotsent, Buxoro", "PhD, доцент, Бухара", "PhD, Associate Professor, Bukhara"]],
+      ["eb-7", "member", 6, ["Ahmet Yılmaz", "Ахмет Йылмаз", "Ahmet Yılmaz"], ["Tahrir hay'ati a'zosi", "Член редколлегии", "Editorial Board Member"], ["PhD, Anqara, Turkiya", "PhD, Анкара, Турция", "PhD, Ankara, Türkiye"]],
+    ].map(([id, type, sort, n, p, a]: any) => ({
+      id, journal_id: J, sort_order: sort, position_type: type, photo_url: null, email: null, orcid: null,
+      full_name: { uz: n[0], ru: n[1], en: n[2] }, position: { uz: p[0], ru: p[1], en: p[2] }, affiliation: { uz: a[0], ru: a[1], en: a[2] },
+    })),
   ];
+
+  const news = [
+    { id: "n1", date: "2026-11-05", pinned: true, created_at: d("2026-11-05"),
+      title: { uz: "4-son uchun maqolalar qabuli boshlandi", ru: "Начат приём статей в выпуск 4", en: "Submissions open for Issue 4" },
+      body: { uz: "<p>Tahririyat 2026-yil dekabr soni uchun maqolalarni 20-dekabrgacha qabul qiladi. Talablar «Mualliflar uchun» sahifasida.</p>", ru: "<p>Редакция принимает статьи в декабрьский выпуск до 20 декабря. Требования — на странице «Авторам».</p>", en: "<p>The editors accept papers for the December 2026 issue until 20 December. Requirements are on the “For authors” page.</p>" } },
+    { id: "n2", date: "2026-10-18", pinned: false, created_at: d("2026-10-18"),
+      title: { uz: "Xalqaro konferensiya materiallari nashr etildi", ru: "Опубликованы материалы международной конференции", en: "International conference proceedings published" },
+      body: { uz: "<p>Maxsus son konferensiyada taqdim etilgan eng yaxshi ma'ruzalarni o'z ichiga oladi.</p>", ru: "<p>Специальный выпуск включает лучшие доклады конференции.</p>", en: "<p>The special issue collects the best papers presented at the conference.</p>" } },
+    { id: "n3", date: "2026-09-02", pinned: false, created_at: d("2026-09-02"),
+      title: { uz: "Tahrir hay'atiga yangi a'zolar qo'shildi", ru: "В редколлегию вошли новые члены", en: "New members join the editorial board" },
+      body: { uz: "<p>Koreya va Turkiyadan olimlar tahrir hay'atiga qo'shildi.</p>", ru: "<p>В редколлегию вошли учёные из Кореи и Турции.</p>", en: "<p>Researchers from Korea and Türkiye have joined the board.</p>" } },
+  ];
+
+  const notifications = [
+    { id: "nt1", user_id: "u-author", type: "status", submission_id: "sub-2", status: "revision_required", link: "/dashboard/submissions/sub-2", read: false, created_at: d("2026-10-03") },
+    { id: "nt2", user_id: "u-reviewer", type: "invite", submission_id: "sub-1", status: null, link: "/dashboard/reviews/rev-1", read: false, created_at: d("2026-10-05") },
+    { id: "nt3", user_id: "u-admin", type: "new", submission_id: "sub-4", status: null, link: "/admin/submissions/sub-4", read: false, created_at: d("2026-11-11") },
+    { id: "nt4", user_id: "u-admin", type: "review", submission_id: "sub-1", status: null, link: "/admin/submissions/sub-1", read: true, created_at: d("2026-10-28") },
+  ];
+
+  // one rejected paper so the acceptance rate is realistic
+  submissions.push(sub("sub-5", "u-author2", "rejected", "Social media use and exam performance: a pilot survey", "2026-07-01", {
+    language: "en", abstract: "A small pilot survey of first-year students. (Demo abstract.)", keywords: ["social media", "students"],
+    decision_note: "The sample is too small for the conclusions drawn.", updated_at: d("2026-07-24"),
+  }));
+  submission_authors.push({ id: "sa-6", submission_id: "sub-5", full_name: "John Lee", email: "author2@demo.uz", affiliation: "Westminster International University in Tashkent", orcid: null, is_corresponding: true, sort_order: 0 });
+  submission_events.push(ev("sub-5", null, "submitted", "2026-07-01"), ev("sub-5", "submitted", "rejected", "2026-07-24", "The sample is too small for the conclusions drawn."));
 
   return {
     profiles, journals, sections, volumes, issues, articles, submissions, submission_authors, submission_files,
-    review_assignments, submission_events, pages, editorial_board, payments: [], site_settings: [],
+    review_assignments, submission_events, pages, editorial_board, payments: [], site_settings: [], news, notifications,
   };
 }

@@ -150,7 +150,7 @@ export default function SubmitForm({ journalId, userId, sections, me }: Props) {
                 {t("submit.corresponding")}
               </label>
               {authors.length > 1 && (
-                <button type="button" className="text-sm text-red-600 hover:underline"
+                <button type="button" className="text-sm text-red-400 hover:underline"
                   onClick={() => setAuthors((l) => l.filter((_, j) => j !== i))}>
                   {t("submit.remove")}
                 </button>
@@ -181,7 +181,7 @@ export default function SubmitForm({ journalId, userId, sections, me }: Props) {
         <input type="checkbox" required className="mt-1" />
         {t("submit.agree")}
       </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button className="btn-primary" disabled={busy}>{busy ? t("submit.sending") : t("submit.send")}</button>
     </form>
   );

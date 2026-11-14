@@ -51,6 +51,41 @@ export interface Journal {
   cover_url: string | null;
   apc_amount: number;
   apc_currency: string;
+  logo_url: string | null;
+  contact_email: string | null;
+  indexes: string[];
+  cfp_deadline: string | null;
+  cfp_text: I18nText;
+}
+
+export interface BoardMember {
+  id: string;
+  full_name: I18nText;
+  position: I18nText;
+  affiliation: I18nText;
+  photo_url: string | null;
+  orcid: string | null;
+  position_type: "chief" | "deputy" | "member";
+  sort_order: number;
+}
+
+export interface NewsItem {
+  id: string;
+  title: I18nText;
+  body: I18nText;
+  date: string;
+  pinned: boolean;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: "status" | "invite" | "review" | "new";
+  submission_id: string | null;
+  status: SubmissionStatus | null;
+  link: string;
+  read: boolean;
+  created_at: string;
 }
 
 export interface Section {

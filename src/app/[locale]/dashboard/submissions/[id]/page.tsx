@@ -47,7 +47,7 @@ export default async function MySubmissionPage({ params }: PageProps<"/[locale]/
         </div>
 
         {s.decision_note && (
-          <div className="card border-amber-200 bg-amber-50">
+          <div className="card border-accent/40 bg-accent/10">
             <h2 className="mb-1 text-lg">{t("submission.editorNote")}</h2>
             <p className="whitespace-pre-line text-sm">{s.decision_note}</p>
           </div>

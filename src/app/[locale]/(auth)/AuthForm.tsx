@@ -24,7 +24,7 @@ export default function AuthForm({ mode, action, next }: Props) {
     <div className="mx-auto max-w-md card">
       <h1 className="mb-6 text-2xl">{mode === "login" ? t("loginTitle") : t("registerTitle")}</h1>
       {state?.message === "checkEmail" ? (
-        <p className="rounded bg-green-50 p-3 text-green-800">{t("checkEmail")}</p>
+        <p className="rounded bg-green-50 p-3 text-brand-700">{t("checkEmail")}</p>
       ) : (
         <form action={formAction} className="space-y-4">
           {next && <input type="hidden" name="next" value={next} />}
@@ -57,15 +57,15 @@ export default function AuthForm({ mode, action, next }: Props) {
             />
             {mode === "register" && <p className="mt-1 text-xs text-slate-500">{t("passwordHint")}</p>}
           </div>
-          {errorText && <p className="text-sm text-red-600">{errorText}</p>}
+          {errorText && <p className="text-sm text-red-400">{errorText}</p>}
           <button className="btn-primary w-full" disabled={pending}>
             {mode === "login" ? t("loginTitle") : t("registerTitle")}
           </button>
         </form>
       )}
       {IS_DEMO && mode === "login" && (
-        <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4">
-          <p className="mb-3 text-sm font-medium text-amber-900">{td("accounts")}</p>
+        <div className="mt-6 rounded-xl border border-accent/40 bg-accent/10 p-4">
+          <p className="mb-3 text-sm font-medium text-accent">{td("accounts")}</p>
           <div className="grid gap-2">
             {(
               [

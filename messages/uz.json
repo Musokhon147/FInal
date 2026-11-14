@@ -12,7 +12,8 @@
     "register": "Ro'yxatdan o'tish",
     "dashboard": "Shaxsiy kabinet",
     "admin": "Admin panel",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "news": "Yangiliklar"
   },
   "common": {
     "save": "Saqlash",
@@ -249,5 +250,91 @@
     "author": "Muallif",
     "reviewer": "Taqrizchi",
     "admin": "Admin / muharrir"
+  },
+  "x": {
+    "fileNote": "Demo rejimda fayllar saqlanmaydi. Supabase ulangach haqiqiy fayllar yuklanadi.",
+    "saved": "Saqlandi",
+    "submitted": "Maqola yuborildi",
+    "needLogin": "Avval tizimga kiring",
+    "heroKicker": "Xalqaro taqrizlanadigan ochiq jurnal",
+    "langsLabel": "Nashr tillari",
+    "published": "Nashr etilgan maqolalar",
+    "howTitle": "Maqola qanday nashr etiladi",
+    "steps": [
+      [
+        "Yuborish",
+        "Maqolani onlayn yuboring va har bir bosqichini shaxsiy kabinetda kuzating."
+      ],
+      [
+        "Taqriz",
+        "Ikki mustaqil taqrizchi yopiq usulda baholaydi, odatda 3–4 hafta."
+      ],
+      [
+        "Qaror",
+        "Muharrir qabul qilish, tuzatish yoki rad etish haqida xabar beradi."
+      ],
+      [
+        "Nashr",
+        "Maqola DOI bilan ochiq kirishda chiqadi va arxivga qo'shiladi."
+      ]
+    ],
+    "onPage": "Ushbu sahifada",
+    "pdfPreview": "PDF ko'rinishi",
+    "openPdf": "To'liq PDF ni ochish",
+    "copy": "Nusxalash",
+    "copied": "Nusxa olindi",
+    "themeLight": "Yorug' rejim",
+    "themeDark": "Tungi rejim",
+    "settings": "Sozlamalar",
+    "logo": "Logotip",
+    "removeLogo": "Logotipni olib tashlash",
+    "contactEmail": "Aloqa uchun email",
+    "photo": "Rasm",
+    "group": "Guruh",
+    "addMember": "A'zo qo'shish",
+    "deleted": "O'chirildi",
+    "g_chief": "Bosh muharrir",
+    "g_deputy": "Muharrir o'rinbosarlari",
+    "g_member": "Tahrir hay'ati a'zolari",
+    "logoHint": "PNG, JPG yoki SVG, 300 KB gacha",
+    "indexedIn": "Indekslangan bazalar",
+    "indexesField": "Indeks bazalari (vergul bilan)",
+    "numbersTitle": "Jurnal raqamlarda",
+    "nArticles": "nashr etilgan maqola",
+    "nCountries": "mamlakatdan mualliflar",
+    "nDays": "kun — o'rtacha qaror muddati",
+    "nRate": "qabul qilish darajasi",
+    "cfpTitle": "Keyingi son uchun maqolalar qabul qilinmoqda",
+    "cfpDeadline": "Qabul muddati",
+    "cfpText": "Chaqiriq matni",
+    "cfpClosed": "Qabul yopildi",
+    "days": "kun",
+    "hours": "soat",
+    "minutes": "daqiqa",
+    "seconds": "soniya",
+    "news": "Yangiliklar",
+    "allNews": "Barcha yangiliklar",
+    "readMore": "Batafsil",
+    "addNews": "Yangilik qo'shish",
+    "pinned": "Yuqorida ko'rsatish",
+    "date": "Sana",
+    "perMonth": "Oylik yuborilgan maqolalar",
+    "byCountry": "Mamlakatlar bo'yicha maqolalar",
+    "byStatus": "Qo'lyozmalar holati",
+    "reviewTime": "O'rtacha qaror muddati",
+    "stepDetails": "Maqola",
+    "stepAuthors": "Mualliflar",
+    "stepFiles": "Fayl",
+    "stepConfirm": "Tasdiqlash",
+    "next": "Keyingi",
+    "prev": "Orqaga",
+    "stepOf": "{n}-qadam, jami {total}",
+    "notifications": "Bildirishnomalar",
+    "markAll": "Hammasini o'qilgan deb belgilash",
+    "noNotif": "Yangi bildirishnomalar yo'q",
+    "n_status": "«{title}» holati: {status}",
+    "n_invite": "Sizga taqriz so'rovi: «{title}»",
+    "n_review": "Taqriz yakunlandi: «{title}»",
+    "n_new": "Yangi qo'lyozma: «{title}»"
   }
 }

@@ -1,44 +1,115 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand-50: #eef4fb;
-  --color-brand-100: #d6e4f5;
-  --color-brand-600: #1f4e8c;
-  --color-brand-700: #183e70;
-  --color-brand-900: #0d2341;
-  --color-accent: #b8862b;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-serif: Georgia, "Times New Roman", serif;
+/* ------------------------------------------------------------------ theme
+   "Samarkand night": lapis, turquoise and gold from the city's tilework.
+   The slate scale is driven by CSS variables so the whole site can switch
+   between dark (default) and light with one class on <html>. */
+@theme inline {
+  --color-slate-50: rgb(var(--s50));
+  --color-slate-100: rgb(var(--s100));
+  --color-slate-200: rgb(var(--s200));
+  --color-slate-300: rgb(var(--s300));
+  --color-slate-400: rgb(var(--s400));
+  --color-slate-500: rgb(var(--s500));
+  --color-slate-600: rgb(var(--s600));
+  --color-slate-700: rgb(var(--s700));
+  --color-slate-800: rgb(var(--s800));
+  --color-slate-900: rgb(var(--s900));
+  --color-brand-50: rgb(var(--b50));
+  --color-brand-100: rgb(var(--b100));
+  --color-brand-600: rgb(var(--b600));
+  --color-brand-700: rgb(var(--b700));
+  --color-brand-900: rgb(var(--b900));
+  --color-accent: rgb(var(--acc));
+  --color-ink: rgb(var(--ink));
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Unbounded", "Manrope", sans-serif;
+}
+
+:root {
+  --s50: 5 11 34; --s100: 12 23 54; --s200: 26 40 80; --s300: 42 58 104; --s400: 100 117 160;
+  --s500: 147 161 196; --s600: 178 189 216; --s700: 205 213 232; --s800: 229 234 244; --s900: 246 242 231;
+  --b50: 13 52 67; --b100: 18 70 87; --b600: 60 200 187; --b700: 121 223 213; --b900: 246 242 231;
+  --acc: 232 177 58; --ink: 5 11 34;
+  color-scheme: dark;
+}
+html.light {
+  --s50: 243 245 250; --s100: 255 255 255; --s200: 219 225 238; --s300: 195 204 224; --s400: 127 138 166;
+  --s500: 83 94 124; --s600: 60 71 102; --s700: 42 52 83; --s800: 27 36 66; --s900: 10 29 92;
+  --b50: 225 243 241; --b100: 198 233 229; --b600: 11 125 115; --b700: 8 101 93; --b900: 10 29 92;
+  --acc: 154 106 0; --ink: 255 255 255;
+  color-scheme: light;
 }
 
 @layer base {
-body {
-  @apply bg-slate-50 text-slate-800 antialiased;
-}
-
-h1, h2, h3 {
-  @apply font-serif text-brand-900;
-}
+  html { background: rgb(var(--s50)); transition: background 0.4s ease; }
+  body { @apply bg-transparent font-sans text-slate-800 antialiased; }
+  h1, h2, h3 { @apply font-serif font-normal text-slate-900; letter-spacing: -0.01em; }
+  ::selection { background: rgb(var(--b600)); color: rgb(var(--ink)); }
+  :focus-visible { outline: 2px solid rgb(var(--acc)); outline-offset: 2px; border-radius: 4px; }
 }
 
 @layer components {
-  .prose-content p { @apply mb-3 leading-relaxed; }
-  .prose-content h2 { @apply mt-6 mb-2 text-xl; }
-  .prose-content h3 { @apply mt-4 mb-2 text-lg; }
-  .prose-content ul { @apply mb-3 list-disc pl-6; }
-  .prose-content ol { @apply mb-3 list-decimal pl-6; }
-  .prose-content a { @apply text-brand-600 underline; }
+  .prose-content p { @apply mb-4 leading-relaxed text-slate-700; }
+  .prose-content h2 { @apply mt-8 mb-3 text-xl; }
+  .prose-content h3 { @apply mt-6 mb-2 text-lg; }
+  .prose-content ul { @apply mb-4 list-disc space-y-1 pl-6 text-slate-700; }
+  .prose-content ol { @apply mb-4 list-decimal space-y-1 pl-6 text-slate-700; }
+  .prose-content a { @apply text-brand-700 underline; }
 
-  .input {
-    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
-  }
-  .label { @apply mb-1 block text-sm font-medium text-slate-700; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 bg-brand-600 text-white hover:bg-brand-700; }
-  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100; }
-  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 bg-red-600 text-white hover:bg-red-700; }
-  .card { @apply rounded-lg border border-slate-200 bg-white p-5 shadow-sm; }
+  .input { @apply w-full rounded-lg border border-slate-300 bg-slate-100/70 px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30; }
+  .input option { background: rgb(var(--s100)); }
+  .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+
+  .btn { @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-brand-600 text-ink hover:bg-brand-700; box-shadow: 0 0 24px -6px rgb(var(--b600) / 0.7); }
+  .btn-secondary { @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-slate-300 bg-slate-100/60 text-slate-800 hover:border-brand-600 hover:text-slate-900; }
+  .btn-gold { @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-accent text-ink hover:brightness-110; box-shadow: 0 0 28px -6px rgb(var(--acc) / 0.75); }
+  .btn-danger { @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-red-600 text-white hover:bg-red-700; }
+
+  .card { @apply rounded-2xl border border-slate-200/80 bg-slate-100/55 p-6 backdrop-blur-md; }
   .table { @apply w-full text-left text-sm; }
   .table th { @apply border-b border-slate-200 px-3 py-2 font-medium text-slate-500; }
-  .table td { @apply border-b border-slate-100 px-3 py-2 align-top; }
+  .table td { @apply border-b border-slate-200/60 px-3 py-3 align-top; }
+  .navlink { @apply text-slate-600 transition hover:text-slate-900; }
+
+  /* status badges, readable in both themes */
+  .badge { @apply inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1; }
+  .b-draft { background: rgb(var(--s200)); color: rgb(var(--s700)); --tw-ring-color: transparent; }
+  .b-withdrawn { background: rgb(var(--s200)); color: rgb(var(--s500)); --tw-ring-color: transparent; }
+  .b-published { background: rgb(var(--b600)); color: rgb(var(--ink)); --tw-ring-color: transparent; }
+  .b-submitted { background: rgb(56 189 248 / 0.14); color: #7dd3fc; --tw-ring-color: rgb(56 189 248 / 0.3); }
+  .b-desk_review { background: rgb(129 140 248 / 0.14); color: #a5b4fc; --tw-ring-color: rgb(129 140 248 / 0.3); }
+  .b-under_review { background: rgb(251 191 36 / 0.14); color: #fcd34d; --tw-ring-color: rgb(251 191 36 / 0.3); }
+  .b-revision_required { background: rgb(251 146 60 / 0.14); color: #fdba74; --tw-ring-color: rgb(251 146 60 / 0.3); }
+  .b-accepted { background: rgb(52 211 153 / 0.14); color: #6ee7b7; --tw-ring-color: rgb(52 211 153 / 0.3); }
+  .b-rejected { background: rgb(248 113 113 / 0.14); color: #fca5a5; --tw-ring-color: rgb(248 113 113 / 0.3); }
+  .light .b-submitted { color: #0369a1; } .light .b-desk_review { color: #4338ca; } .light .b-under_review { color: #92400e; }
+  .light .b-revision_required { color: #9a3412; } .light .b-accepted { color: #047857; } .light .b-rejected { color: #b91c1c; }
+  .text-red-400 { color: #f87171; } .light .text-red-400 { color: #b91c1c; }
+
+  /* motion */
+  .reveal { opacity: 0; transform: translateY(14px); animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .page-enter { animation: pageIn 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  @keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .step { opacity: 0.35; transform: translateY(10px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .step.is-on { opacity: 1; transform: none; }
+  .step.is-on .step-num { text-shadow: 0 0 22px rgb(var(--acc) / 0.6); }
+  .tilt { transform-style: preserve-3d; transition: transform 0.25s ease, box-shadow 0.25s ease; will-change: transform; }
+  .read-progress { position: fixed; top: 0; left: 0; z-index: 60; height: 3px; width: 100%; background: linear-gradient(90deg, rgb(var(--b600)), rgb(var(--acc))); transform-origin: left; transform: scaleX(0); }
+  .paper { background: #fffdf7; color: #1c2238; }
+  .chart-bar { transform-box: fill-box; transform-origin: bottom; animation: growY 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  @keyframes growY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .chart-hbar { transform-origin: left; animation: growX 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  @keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .step-fill { width: 0; transition: width 0.5s ease; }
+  .step-ind.is-current .step-fill { width: 100%; opacity: 0.55; }
+  .step-ind.is-done .step-fill { width: 100%; }
+  .step-ind.is-current > span:last-child { color: rgb(var(--s900)); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .page-enter, .chart-bar, .chart-hbar { animation: none; opacity: 1; transform: none; }
+    .step { opacity: 1; transform: none; }
+  }
 }

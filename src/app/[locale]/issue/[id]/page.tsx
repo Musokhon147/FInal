@@ -6,7 +6,8 @@ import { initLocale } from "@/lib/locale";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, tr } from "@/lib/i18n-field";
 import { issueLabel } from "@/lib/issue-label";
-import ArticleList, { ARTICLE_LIST_SELECT, type ListedArticle } from "@/components/public/ArticleList";
+import ArticleList, { ARTICLE_LIST_SELECT, topicOf, type ListedArticle } from "@/components/public/ArticleList";
+import IssueCover from "@/components/design/IssueCover";
 
 async function load(id: string) {
   const supabase = await createClient();
@@ -46,9 +47,15 @@ export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[
   return (
     <div>
       <nav className="mb-4 text-sm text-slate-500">
-        <Link href="/" className="hover:underline">{t("nav.home")}</Link> /{" "}
-        <Link href="/archives" className="hover:underline">{t("nav.archives")}</Link> / {issueLabel(t, issue)}
+        <Link href="/" className="hover:text-slate-900">{t("nav.home")}</Link> /{" "}
+        <Link href="/archives" className="hover:text-slate-900">{t("nav.archives")}</Link> / {issueLabel(t, issue)}
       </nav>
+      <div className="grid gap-8 md:grid-cols-[240px_1fr]">
+      <div className="md:sticky md:top-28 md:self-start">
+        <IssueCover id={issue.id} number={issue.number} isSpecial={issue.is_special} size="lg"
+          volumeLabel={issue.volumes ? t("archives.volume", { n: issue.volumes.number, year: issue.volumes.year }) : ""}
+          topic={topicOf((articles ?? []) as unknown as ListedArticle[])} />
+      </div>
       <div className="card">
         <h1 className="text-3xl">{issueLabel(t, issue)}</h1>
         {tr(issue.title, locale) && <p className="mt-1 text-lg text-slate-700">{tr(issue.title, locale)}</p>}
@@ -62,6 +69,7 @@ export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[
         )}
         <h2 className="mt-8 border-b border-slate-200 pb-2 text-xl">{t("issue.articles")}</h2>
         <ArticleList articles={(articles ?? []) as unknown as ListedArticle[]} />
+      </div>
       </div>
     </div>
   );

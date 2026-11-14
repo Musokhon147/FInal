@@ -45,11 +45,11 @@ export default function RevisionUpload({ submissionId, nextVersion }: { submissi
   }
 
   return (
-    <form onSubmit={onSubmit} className="card space-y-3 border-orange-200">
+    <form onSubmit={onSubmit} className="card space-y-3 border-orange-400/40">
       <h2 className="text-lg">{t("submission.revision")}</h2>
       <p className="text-sm text-slate-600">{t("submission.revisionHint")}</p>
       <input className="input" type="file" name="file" required accept=".doc,.docx,.pdf" />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button className="btn-primary" disabled={busy}>{busy ? t("submit.sending") : t("submission.sendRevision")}</button>
     </form>
   );

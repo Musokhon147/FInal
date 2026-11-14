@@ -9,7 +9,7 @@ export default function WithdrawButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
   return (
     <button
-      className="btn-secondary w-full text-red-600"
+      className="btn-secondary w-full text-red-400"
       disabled={pending}
       onClick={() => {
         if (confirm(t("withdraw") + "?")) start(() => withdrawSubmission(id));

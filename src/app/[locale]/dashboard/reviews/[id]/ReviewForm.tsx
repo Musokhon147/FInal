@@ -27,7 +27,7 @@ export default function ReviewForm({ id }: { id: string }) {
         <label className="label" htmlFor="comments_to_editor">{t("review.toEditor")}</label>
         <textarea className="input min-h-24" id="comments_to_editor" name="comments_to_editor" />
       </div>
-      {state?.error && <p className="text-sm text-red-600">{state.error === "recommendation" ? t("review.recommendation") : state.error}</p>}
+      {state?.error && <p className="text-sm text-red-400">{state.error === "recommendation" ? t("review.recommendation") : state.error}</p>}
       <button className="btn-primary" disabled={pending}>{t("review.send")}</button>
     </form>
   );

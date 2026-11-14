@@ -52,6 +52,7 @@ const REL: Record<string, Record<string, Rel>> = {
   issues: { volumes: { one: "volumes", fk: "volume_id" }, articles: { many: "articles", fk: "issue_id" } },
   volumes: { issues: { many: "issues", fk: "volume_id" } },
   submissions: { profiles: { one: "profiles", fk: "submitter_id" }, sections: { one: "sections", fk: "section_id" } },
+  notifications: { submissions: { one: "submissions", fk: "submission_id" } },
   review_assignments: {
     profiles: { one: "profiles", fk: "reviewer_id" },
     submissions: { one: "submissions", fk: "submission_id" },
@@ -165,6 +166,10 @@ function withDefaults(table: string, v: any, uid: string | null) {
       return { status: "draft", published_at: null, is_special: false, title: {}, description: {}, cover_url: null, ...base };
     case "pages":
       return { is_published: true, show_in_menu: false, sort_order: 0, title: {}, body: {}, ...base };
+    case "news":
+      return { pinned: false, body: {}, title: {}, date: now().slice(0, 10), ...base };
+    case "editorial_board":
+      return { position_type: "member", photo_url: null, email: null, orcid: null, sort_order: 10, ...base };
     case "submission_events":
       return { id: ++seq, actor_id: uid, ...v, created_at: now() };
     default:
@@ -182,10 +187,25 @@ function beforeUpdate(table: string, oldRow: any, patch: any) {
   if ("updated_at" in oldRow) patch.updated_at = now();
 }
 
+function notifyRow(user_id: string, type: string, submission_id: string, link: string, status: string | null = null) {
+  db().notifications.push({ id: crypto.randomUUID(), user_id, type, submission_id, status, link, read: false, created_at: now() });
+}
+const staffIds = () => db().profiles.filter((p: any) => p.role === "editor" || p.role === "admin").map((p: any) => p.id);
+
+// mirrors the database triggers (event log + notifications)
 function afterWrite(table: string, before: any | null, after: any, uid: string | null) {
+  if (table === "review_assignments") {
+    if (!before) notifyRow(after.reviewer_id, "invite", after.submission_id, `/dashboard/reviews/${after.id}`);
+    else if (after.status === "completed" && before.status !== "completed")
+      staffIds().forEach((s: string) => notifyRow(s, "review", after.submission_id, `/admin/submissions/${after.submission_id}`));
+    return;
+  }
   if (table !== "submissions") return;
   if (!before) logEvent(after.id, null, after.status, null, uid);
   else if (before.status !== after.status) logEvent(after.id, before.status, after.status, after.decision_note, uid);
+  if (before && before.status === after.status) return;
+  if (after.status === "submitted") staffIds().forEach((s: string) => notifyRow(s, "new", after.id, `/admin/submissions/${after.id}`));
+  else if (after.status !== "draft" && uid !== after.submitter_id) notifyRow(after.submitter_id, "status", after.id, `/dashboard/submissions/${after.id}`, after.status);
 }
 
 /* ---------------------------------------------------------------- execute */
@@ -253,6 +273,18 @@ function runRpc(name: string, args: any, uid: string | null): Result {
       .filter((r: any) => r.submission_id === args.sid && r.status === "completed")
       .map((r: any) => ({ round: r.round, recommendation: r.recommendation, comments_to_author: r.comments_to_author, completed_at: r.completed_at }));
     return { data, error: null };
+  }
+  if (name === "journal_numbers") {
+    const decided = ["accepted", "rejected", "revision_required"];
+    const days: number[] = [];
+    for (const sub of store.submissions) {
+      const ev = store.submission_events.filter((e: any) => e.submission_id === sub.id).sort((a: any, b: any) => a.created_at.localeCompare(b.created_at));
+      const a = ev.find((e: any) => e.to_status === "submitted"), b = ev.find((e: any) => decided.includes(e.to_status));
+      if (a && b && b.created_at > a.created_at) days.push((Date.parse(b.created_at) - Date.parse(a.created_at)) / 864e5);
+    }
+    const finals = store.submissions.filter((x: any) => ["accepted", "published", "rejected"].includes(x.status));
+    const acc = finals.filter((x: any) => x.status !== "rejected").length;
+    return { data: [{ decision_days: days.length ? Math.round(days.reduce((p, c) => p + c, 0) / days.length) : 0, acceptance_rate: finals.length ? Math.round((100 * acc) / finals.length) : 0 }], error: null };
   }
   void uid;
   return { data: null, error: { message: `Unknown rpc ${name}` } };

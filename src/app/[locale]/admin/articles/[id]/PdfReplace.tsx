@@ -32,7 +32,7 @@ export default function PdfReplace({ articleId }: { articleId: string }) {
     >
       <input type="file" name="pdf" accept="application/pdf" className="input max-w-sm" required />
       <button className="btn-secondary" disabled={busy}>{busy ? t("loading") : t("save")}</button>
-      {error && <p className="w-full text-sm text-red-600">{error}</p>}
+      {error && <p className="w-full text-sm text-red-400">{error}</p>}
     </form>
   );
 }

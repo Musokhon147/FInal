@@ -54,8 +54,8 @@ export default async function ReviewPage({ params }: PageProps<"/[locale]/dashbo
       {r.status === "invited" && <InviteButtons id={r.id} />}
       {r.status === "accepted" && <ReviewForm id={r.id} />}
       {r.status === "completed" && (
-        <div className="card bg-green-50">
-          <p className="font-medium text-green-800">{t("review.thanks")}</p>
+        <div className="card border-brand-600/40 bg-brand-600/10">
+          <p className="font-medium text-brand-700">{t("review.thanks")}</p>
           <p className="mt-2 text-sm">{t("review.recommendation")}: {r.recommendation && t(`rec.${r.recommendation}`)}</p>
           {r.comments_to_author && <p className="mt-2 whitespace-pre-line text-sm">{r.comments_to_author}</p>}
         </div>

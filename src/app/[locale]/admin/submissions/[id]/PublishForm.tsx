@@ -37,7 +37,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
   }
 
   return (
-    <form onSubmit={onSubmit} className="card space-y-3 border-emerald-200">
+    <form onSubmit={onSubmit} className="card space-y-3 border-brand-600/50">
       <h2 className="text-lg">{t("admin.publish")}</h2>
       <div>
         <label className="label">{t("admin.selectIssue")}</label>
@@ -51,7 +51,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
       </div>
       <div><label className="label">{t("admin.doi")}</label><input name="doi" className="input" placeholder="10.xxxx/xxxx" /></div>
       <div><label className="label">{t("admin.finalPdf")}</label><input name="pdf" type="file" accept="application/pdf" className="input" /></div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button className="btn-primary w-full" disabled={busy || !issues.length}>{busy ? t("common.loading") : t("admin.publish")}</button>
     </form>
   );

@@ -103,7 +103,7 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
                       <p className="mt-1 whitespace-pre-line"><span className="text-slate-500">{t("review.toAuthor")}:</span> {r.comments_to_author}</p>
                     )}
                     {r.comments_to_editor && (
-                      <p className="mt-1 whitespace-pre-line text-amber-800"><span className="text-slate-500">{t("review.toEditor")}:</span> {r.comments_to_editor}</p>
+                      <p className="mt-1 whitespace-pre-line text-accent"><span className="text-slate-500">{t("review.toEditor")}:</span> {r.comments_to_editor}</p>
                     )}
                   </li>
                 ))}

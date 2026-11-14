@@ -1,34 +1,28 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
+import { useLocale } from "next-intl";
 import { useTransition } from "react";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { routing, type Locale } from "@/i18n/routing";
 
 export default function LanguageSwitcher() {
-  const t = useTranslations("langs");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [pending, start] = useTransition();
-
   return (
-    <select
-      aria-label="Language"
-      className="rounded border border-white/30 bg-transparent px-2 py-1 text-sm text-white [&>option]:text-slate-900"
-      value={locale}
-      disabled={pending}
-      onChange={(e) =>
-        start(() => {
-          router.replace(pathname, { locale: e.target.value as (typeof routing.locales)[number] });
-        })
-      }
-    >
+    <div className="flex rounded-full border border-slate-200 p-0.5" role="group" aria-label="Language">
       {routing.locales.map((l) => (
-        <option key={l} value={l}>
-          {t(l)}
-        </option>
+        <button
+          key={l}
+          disabled={pending}
+          aria-pressed={l === locale}
+          onClick={() => start(() => router.replace(pathname, { locale: l as Locale }))}
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${l === locale ? "bg-slate-900 text-ink" : "text-slate-600 hover:text-slate-900"}`}
+        >
+          {l.toUpperCase()}
+        </button>
       ))}
-    </select>
+    </div>
   );
 }

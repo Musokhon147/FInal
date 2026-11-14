@@ -2,78 +2,85 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getSession, isStaff } from "@/lib/auth";
 import { getJournal, getMenuPages } from "@/lib/data";
-import { tr } from "@/lib/i18n-field";
+import { formatDate, tr } from "@/lib/i18n-field";
+import type { Notification } from "@/lib/types";
 import LanguageSwitcher from "./LanguageSwitcher";
+import ThemeToggle from "./fx/ThemeToggle";
+import NotificationBell, { type BellItem } from "./fx/NotificationBell";
+import { Logo } from "./design/StarMark";
 import { logout } from "@/app/[locale]/(auth)/actions";
 
 export default async function Header() {
-  const t = await getTranslations("nav");
+  const t = await getTranslations();
   const locale = await getLocale();
-  const [{ user, profile }, journal, pages] = await Promise.all([
-    getSession(),
-    getJournal(),
-    getMenuPages(),
-  ]);
+  const [{ supabase, user, profile }, journal, pages] = await Promise.all([getSession(), getJournal(), getMenuPages()]);
 
+  let bell: BellItem[] = [];
+  if (user) {
+    const { data } = await supabase
+      .from("notifications")
+      .select("*, submissions(title)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    bell = ((data ?? []) as (Notification & { submissions: { title: string } | null })[]).map((n) => {
+      const title = n.submissions?.title ?? "";
+      const short = title.length > 60 ? title.slice(0, 57) + "…" : title;
+      return {
+        id: n.id, link: n.link, read: n.read, date: formatDate(n.created_at, locale),
+        text: t(`x.n_${n.type}`, { title: short, status: n.status ? t(`status.${n.status}`) : "" }),
+      };
+    });
+  }
+
+  const name = tr(journal?.title, locale) || "Journal";
   return (
-    <header className="bg-brand-900 text-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 text-sm">
-        <div className="hidden text-white/70 sm:block">
-          {journal?.issn_online && <>ISSN {journal.issn_online}</>}
-        </div>
-        <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-50/70 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center gap-6 px-5 py-3">
+        <Link href="/" className="flex shrink-0 items-center gap-3">
+          <Logo url={journal?.logo_url} size={30} />
+          <span className="font-serif text-lg tracking-tight text-slate-900">{name}</span>
+        </Link>
+        <nav className="hidden flex-1 items-center gap-5 whitespace-nowrap text-sm xl:flex" aria-label="Main">
+          <Link href="/current" className="navlink">{t("nav.current")}</Link>
+          <Link href="/archives" className="navlink">{t("nav.archives")}</Link>
+          <Link href="/board" className="navlink">{t("nav.board")}</Link>
+          <Link href="/news" className="navlink">{t("nav.news")}</Link>
+          {pages.slice(0, user ? 0 : 2).map((p) => (
+            <Link key={p.id} href={`/p/${p.slug}`} className="navlink">{tr(p.title, locale)}</Link>
+          ))}
+          <Link href="/search" className="navlink" aria-label={t("nav.search")}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          </Link>
+        </nav>
+        <div className="ml-auto flex items-center gap-3 whitespace-nowrap">
+          {user && <NotificationBell items={bell} />}
+          <ThemeToggle />
+          <LanguageSwitcher />
           {user ? (
             <>
-              {isStaff(profile) && (
-                <Link href="/admin" className="hover:underline">
-                  {t("admin")}
-                </Link>
-              )}
-              <Link href="/dashboard" className="hover:underline">
-                {t("dashboard")}
-              </Link>
+              {isStaff(profile) && <Link href="/admin" className="navlink hidden text-sm sm:inline">{t("nav.admin")}</Link>}
+              <Link href="/dashboard" className="navlink hidden text-sm sm:inline">{t("nav.dashboard")}</Link>
               <form action={logout}>
-                <button className="hover:underline">{t("logout")}</button>
+                <button className="navlink p-1" aria-label={t("nav.logout")} title={t("nav.logout")}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" /></svg>
+                </button>
               </form>
             </>
           ) : (
-            <>
-              <Link href="/login" className="hover:underline">
-                {t("login")}
-              </Link>
-              <Link href="/register" className="hover:underline">
-                {t("register")}
-              </Link>
-            </>
+            <Link href="/login" className="navlink text-sm">{t("nav.login")}</Link>
           )}
-          <LanguageSwitcher />
+          <Link href="/dashboard/submit" className="btn-gold hidden sm:inline-flex">{t("nav.submit")}</Link>
         </div>
       </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
-          <Link href="/" className="font-serif text-2xl font-semibold tracking-tight">
-            {tr(journal?.title, locale) || "Journal"}
-          </Link>
-          <Link href="/dashboard/submit" className="btn bg-accent text-white hover:opacity-90">
-            {t("submit")}
-          </Link>
-        </div>
-      </div>
-      <nav className="bg-brand-700">
-        <ul className="mx-auto flex max-w-6xl flex-wrap gap-x-6 gap-y-1 px-4 py-2 text-sm">
-          <li><Link href="/" className="hover:underline">{t("home")}</Link></li>
-          <li><Link href="/current" className="hover:underline">{t("current")}</Link></li>
-          <li><Link href="/archives" className="hover:underline">{t("archives")}</Link></li>
-          <li><Link href="/board" className="hover:underline">{t("board")}</Link></li>
-          {pages.map((p) => (
-            <li key={p.id}>
-              <Link href={`/p/${p.slug}`} className="hover:underline">
-                {tr(p.title, locale)}
-              </Link>
-            </li>
-          ))}
-          <li className="ml-auto"><Link href="/search" className="hover:underline">{t("search")}</Link></li>
-        </ul>
+      <nav className="flex gap-5 overflow-x-auto whitespace-nowrap border-t border-white/5 px-5 py-2 text-sm xl:hidden" aria-label="Main mobile">
+        <Link href="/current" className="navlink shrink-0">{t("nav.current")}</Link>
+        <Link href="/archives" className="navlink shrink-0">{t("nav.archives")}</Link>
+        <Link href="/board" className="navlink shrink-0">{t("nav.board")}</Link>
+        <Link href="/news" className="navlink shrink-0">{t("nav.news")}</Link>
+        {pages.map((p) => <Link key={p.id} href={`/p/${p.slug}`} className="navlink shrink-0">{tr(p.title, locale)}</Link>)}
+        <Link href="/search" className="navlink shrink-0">{t("nav.search")}</Link>
+        <Link href="/dashboard/submit" className="shrink-0 font-semibold text-accent">{t("nav.submit")}</Link>
       </nav>
     </header>
   );
