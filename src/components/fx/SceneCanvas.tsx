@@ -45,5 +45,5 @@ export default function SceneCanvas() {
     api.current?.setMode(modeRef.current);
   }, [pathname]);
 
-  return <canvas ref={ref} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-full w-full" />;
+  return <canvas ref={ref} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-full w-full print:hidden" />;
 }

@@ -161,6 +161,8 @@ export interface Submission {
   references: string | null;
   cover_letter: string | null;
   decision_note: string | null;
+  similarity_percent: number | null;
+  similarity_note: string | null;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -198,7 +200,11 @@ export interface ReviewAssignment {
   comments_to_editor: string | null;
   due_at: string | null;
   completed_at: string | null;
+  scores: Partial<Record<ScoreKey, number>>;
 }
+
+export const SCORE_KEYS = ["originality", "methodology", "clarity", "significance"] as const;
+export type ScoreKey = (typeof SCORE_KEYS)[number];
 
 export interface CmsPage {
   id: string;

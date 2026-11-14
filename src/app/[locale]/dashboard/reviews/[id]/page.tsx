@@ -58,6 +58,7 @@ export default async function ReviewPage({ params }: PageProps<"/[locale]/dashbo
           <p className="font-medium text-brand-700">{t("review.thanks")}</p>
           <p className="mt-2 text-sm">{t("review.recommendation")}: {r.recommendation && t(`rec.${r.recommendation}`)}</p>
           {r.comments_to_author && <p className="mt-2 whitespace-pre-line text-sm">{r.comments_to_author}</p>}
+          <Link href={`/certificate/review/${r.id}`} className="btn-gold mt-4">{t("x.certReview")}</Link>
         </div>
       )}
     </div>

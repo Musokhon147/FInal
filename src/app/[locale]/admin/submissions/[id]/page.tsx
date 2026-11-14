@@ -9,7 +9,8 @@ import FileList from "@/components/panel/FileList";
 import Timeline, { type TimelineEvent } from "@/components/panel/Timeline";
 import { issueLabel } from "@/lib/issue-label";
 import type { Profile, ReviewAssignment, Submission, SubmissionAuthor, SubmissionFile } from "@/lib/types";
-import { assignReviewer, setDecision } from "../../actions";
+import { assignReviewer, setDecision, setSimilarity } from "../../actions";
+import { SCORE_KEYS } from "@/lib/types";
 import PublishForm from "./PublishForm";
 import CancelReviewButton from "./CancelReviewButton";
 
@@ -99,6 +100,17 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
                       {["invited", "accepted"].includes(r.status) && <CancelReviewButton id={r.id} />}
                     </div>
                     {r.recommendation && <p className="mt-2 font-medium">{t(`rec.${r.recommendation}`)}</p>}
+                    {r.scores && Object.keys(r.scores).length > 0 && (
+                      <div className="mt-3 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+                        {SCORE_KEYS.filter((k) => r.scores[k]).map((k) => (
+                          <div key={k} className="flex items-center gap-3 text-xs">
+                            <span className="w-28 shrink-0 text-slate-500">{t(`x.s_${k}`)}</span>
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-brand-600" style={{ width: `${(r.scores[k]! / 5) * 100}%` }} /></span>
+                            <span className="w-4 tabular-nums text-slate-700">{r.scores[k]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {r.comments_to_author && (
                       <p className="mt-1 whitespace-pre-line"><span className="text-slate-500">{t("review.toAuthor")}:</span> {r.comments_to_author}</p>
                     )}
@@ -135,6 +147,23 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
         </div>
 
         <aside className="space-y-6">
+          <form action={setSimilarity} className="card space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg">{t("x.similarity")}</h2>
+              {s.similarity_percent !== null && s.similarity_percent !== undefined ? (
+                <span className={`badge ${s.similarity_percent < 15 ? "b-accepted" : s.similarity_percent <= 30 ? "b-under_review" : "b-rejected"}`}>
+                  {s.similarity_percent}% · {t(s.similarity_percent < 15 ? "x.simLow" : s.similarity_percent <= 30 ? "x.simMid" : "x.simHigh")}
+                </span>
+              ) : <span className="text-xs text-slate-500">{t("x.similarityNone")}</span>}
+            </div>
+            <input type="hidden" name="id" value={s.id} />
+            <label className="block"><span className="label">{t("x.similarityPercent")}</span>
+              <input name="similarity_percent" type="number" min={0} max={100} step="0.1" defaultValue={s.similarity_percent ?? ""} className="input" /></label>
+            <label className="block"><span className="label">{t("x.similarityNote")}</span>
+              <input name="similarity_note" defaultValue={s.similarity_note ?? ""} className="input" /></label>
+            <button className="btn-secondary w-full">{t("common.save")}</button>
+          </form>
+
           {!["published", "withdrawn"].includes(s.status) && (
             <form action={setDecision} className="card space-y-3">
               <h2 className="text-lg">{t("admin.changeStatus")}</h2>

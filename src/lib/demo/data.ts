@@ -137,14 +137,14 @@ export function createSeed(): DemoDb {
     id, journal_id: J, section_id: S1, submitter_id: submitter, editor_id: status === "submitted" ? null : "u-admin", status, title,
     abstract: "Ushbu tadqiqotda masalaning nazariy asoslari, amaliy holati va takomillashtirish yo'llari ko'rib chiqiladi. (Demo annotatsiya.)",
     keywords: ["demo", "tadqiqot", "tahlil"], language: "uz", references: "1. [Reference]\n2. [Reference]",
-    cover_letter: null, decision_note: null, submitted_at: d(created), created_at: d(created), updated_at: d(created), ...extra,
+    cover_letter: null, decision_note: null, similarity_percent: null, similarity_note: null, submitted_at: d(created), created_at: d(created), updated_at: d(created), ...extra,
   });
   const submissions = [
-    sub("sub-1", "u-author", "under_review", "Raqamli ta'lim platformalarining oliy ta'lim sifatiga ta'siri", "2026-10-02"),
+    sub("sub-1", "u-author", "under_review", "Raqamli ta'lim platformalarining oliy ta'lim sifatiga ta'siri", "2026-10-02", { similarity_percent: 21 }),
     sub("sub-2", "u-author", "revision_required", "Hududiy innovatsion salohiyatni baholash metodikasi", "2026-09-05", {
       decision_note: "Taqrizchilar izohlarini hisobga olib, metodika bo'limini kengaytiring va 2025-yil ma'lumotlarini qo'shing.",
     }),
-    sub("sub-3", "u-author2", "accepted", "Green finance instruments for SMEs in Uzbekistan", "2026-08-12", { language: "en", abstract: "This paper reviews green bonds and green credit lines available to small businesses. (Demo abstract.)", keywords: ["green finance", "SMEs"] }),
+    sub("sub-3", "u-author2", "accepted", "Green finance instruments for SMEs in Uzbekistan", "2026-08-12", { similarity_percent: 8.5, similarity_note: "Antiplagiat.ru, report #DEMO-1", language: "en", abstract: "This paper reviews green bonds and green credit lines available to small businesses. (Demo abstract.)", keywords: ["green finance", "SMEs"] }),
     sub("sub-4", "u-author2", "submitted", "Student motivation in blended learning: evidence from Tashkent universities", "2026-11-11", { language: "en", abstract: "A survey of 600 students on motivation in blended courses. (Demo abstract.)", keywords: ["blended learning", "motivation"] }),
   ];
 
@@ -168,13 +168,13 @@ export function createSeed(): DemoDb {
 
   const review = (id: string, sid: string, rid: string, status: string, extra: any = {}) => ({
     id, submission_id: sid, reviewer_id: rid, round: 1, status, recommendation: null, comments_to_author: null, comments_to_editor: null,
-    due_at: d("2026-11-30"), completed_at: null, created_at: d("2026-10-05"), ...extra,
+    due_at: d("2026-11-30"), completed_at: null, created_at: d("2026-10-05"), scores: {}, ...extra,
   });
   const review_assignments = [
     review("rev-1", "sub-1", "u-reviewer", "invited"),
-    review("rev-2", "sub-1", "u-reviewer2", "completed", { recommendation: "minor_revision", comments_to_author: "Работа актуальна. Рекомендую уточнить выборку и добавить сравнение с данными 2024 года.", comments_to_editor: "В целом статья хорошая.", completed_at: d("2026-10-28") }),
-    review("rev-3", "sub-2", "u-reviewer", "completed", { recommendation: "major_revision", comments_to_author: "Metodika bo'limi juda qisqa. Indikatorlarni tanlash asoslanmagan, ma'lumotlar manbasini ko'rsating.", comments_to_editor: "Qayta ishlangandan keyin ko'rib chiqishga tayyorman.", completed_at: d("2026-10-01") }),
-    review("rev-4", "sub-3", "u-reviewer", "completed", { recommendation: "accept", comments_to_author: "Well structured and clearly argued.", completed_at: d("2026-10-15") }),
+    review("rev-2", "sub-1", "u-reviewer2", "completed", { recommendation: "minor_revision", comments_to_author: "Работа актуальна. Рекомендую уточнить выборку и добавить сравнение с данными 2024 года.", comments_to_editor: "В целом статья хорошая.", completed_at: d("2026-10-28"), scores: { originality: 4, methodology: 3, clarity: 4, significance: 4 } }),
+    review("rev-3", "sub-2", "u-reviewer", "completed", { recommendation: "major_revision", comments_to_author: "Metodika bo'limi juda qisqa. Indikatorlarni tanlash asoslanmagan, ma'lumotlar manbasini ko'rsating.", comments_to_editor: "Qayta ishlangandan keyin ko'rib chiqishga tayyorman.", completed_at: d("2026-10-01"), scores: { originality: 3, methodology: 2, clarity: 3, significance: 3 } }),
+    review("rev-4", "sub-3", "u-reviewer", "completed", { recommendation: "accept", comments_to_author: "Well structured and clearly argued.", completed_at: d("2026-10-15"), scores: { originality: 5, methodology: 4, clarity: 5, significance: 4 } }),
   ];
 
   let e = 0;

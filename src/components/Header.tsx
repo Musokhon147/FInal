@@ -35,7 +35,7 @@ export default async function Header() {
 
   const name = tr(journal?.title, locale) || "Journal";
   return (
-    <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-50/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 print:hidden border-b border-white/5 bg-slate-50/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center gap-6 px-5 py-3">
         <Link href="/" className="flex shrink-0 items-center gap-3">
           <Logo url={journal?.logo_url} size={30} />

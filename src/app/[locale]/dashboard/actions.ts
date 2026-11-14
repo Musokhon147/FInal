@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ReviewRec } from "@/lib/types";
+import { SCORE_KEYS, type ReviewRec } from "@/lib/types";
 
 export async function withdrawSubmission(id: string) {
   const supabase = await createClient();
@@ -30,10 +30,16 @@ export async function submitReview(_: ReviewState, formData: FormData): Promise<
   if (!["accept", "minor_revision", "major_revision", "reject"].includes(recommendation)) {
     return { error: "recommendation" };
   }
+  const scores: Record<string, number> = {};
+  for (const k of SCORE_KEYS) {
+    const v = Number(formData.get(`score_${k}`));
+    if (v >= 1 && v <= 5) scores[k] = v;
+  }
   const { error } = await supabase
     .from("review_assignments")
     .update({
       status: "completed",
+      scores,
       recommendation,
       comments_to_author: String(formData.get("comments_to_author") ?? ""),
       comments_to_editor: String(formData.get("comments_to_editor") ?? ""),

@@ -204,6 +204,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           {a.pdf_path && <a href={`/api/download/${a.id}`} className="btn-gold w-full py-3">{t("article.pdf")}</a>}
+          <Link href={`/certificate/publication/${a.id}`} className="btn-secondary w-full">{t("x.certPublication")}</Link>
           <nav className="card p-5 text-sm" aria-label={t("x.onPage")}>
             <p className="mb-3 font-semibold text-slate-900">{t("x.onPage")}</p>
             <ul className="space-y-2 border-l border-slate-200">

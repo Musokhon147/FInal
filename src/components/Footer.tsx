@@ -9,7 +9,7 @@ export default async function Footer() {
   const locale = await getLocale();
   const [journal, pages] = await Promise.all([getJournal(), getMenuPages()]);
   return (
-    <footer className="relative mt-24 border-t border-white/5 bg-slate-50/80 backdrop-blur">
+    <footer className="relative mt-24 print:hidden border-t border-white/5 bg-slate-50/80 backdrop-blur">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-3"><Logo url={journal?.logo_url} size={34} /><span className="font-serif text-xl text-slate-900">{tr(journal?.title, locale)}</span></div>

@@ -115,3 +115,11 @@ html.light {
     .step { opacity: 1; transform: none; }
   }
 }
+
+/* printing certificates: one A4 landscape page, no site chrome */
+@page cert { size: A4 landscape; margin: 0; }
+@media print {
+  html, body { background: #fff !important; }
+  .cert { page: cert; width: 297mm; height: 210mm; }
+  #page { padding: 0 !important; max-width: none !important; }
+}

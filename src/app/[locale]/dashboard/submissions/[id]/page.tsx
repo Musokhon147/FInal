@@ -29,6 +29,9 @@ export default async function MySubmissionPage({ params }: PageProps<"/[locale]/
   const fileList = (files ?? []) as SubmissionFile[];
   const reviewList = (reviews ?? []) as { round: number; recommendation: ReviewRec; comments_to_author: string | null; completed_at: string }[];
   const canWithdraw = !["published", "rejected", "withdrawn"].includes(s.status);
+  const { data: article } = s.status === "published"
+    ? await supabase.from("articles").select("id, status").eq("submission_id", s.id).eq("status", "published").maybeSingle()
+    : { data: null };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
@@ -90,6 +93,12 @@ export default async function MySubmissionPage({ params }: PageProps<"/[locale]/
           <h2 className="mb-4 text-lg">{t("submission.timeline")}</h2>
           <Timeline events={(events ?? []) as TimelineEvent[]} />
         </div>
+        {article && (
+          <div className="card space-y-3">
+            <Link href={`/article/${article.id}`} className="btn-secondary w-full">{t("common.view")}</Link>
+            <Link href={`/certificate/publication/${article.id}`} className="btn-gold w-full">{t("x.certPublication")}</Link>
+          </div>
+        )}
         {canWithdraw && <WithdrawButton id={s.id} />}
       </aside>
     </div>

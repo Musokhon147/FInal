@@ -49,7 +49,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           <Effects />
           <div className="relative z-10 flex min-h-screen flex-col">
             {IS_DEMO && (
-              <div className="border-b border-accent/20 bg-accent/10 px-4 py-1.5 text-center text-xs text-accent">{td("banner")}</div>
+              <div className="border-b border-accent/20 bg-accent/10 px-4 py-1.5 text-center text-xs text-accent print:hidden">{td("banner")}</div>
             )}
             <Header />
             <main className="flex-1"><div id="page" className="mx-auto w-full max-w-7xl px-5 py-10">{children}</div></main>

@@ -276,3 +276,16 @@ export async function deleteNews(id: string) {
   await supabase.from("news").delete().eq("id", id);
   done();
 }
+
+/* ---------- plagiarism / similarity check */
+export async function setSimilarity(formData: FormData) {
+  const { supabase } = await staff();
+  const raw = str(formData, "similarity_percent");
+  const pct = raw === "" ? null : Math.max(0, Math.min(100, Number(raw.replace(",", "."))));
+  const { error } = await supabase
+    .from("submissions")
+    .update({ similarity_percent: pct, similarity_note: str(formData, "similarity_note") || null })
+    .eq("id", str(formData, "id"));
+  if (error) throw new Error(error.message);
+  done();
+}
