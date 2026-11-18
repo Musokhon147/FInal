@@ -71,7 +71,8 @@ function ScholarTags({ a, journalTitle, issn, publisher, locale }: { a: FullArti
       {m("citation_language", a.language)}
       {m("citation_keywords", a.keywords.join("; "))}
       {m("citation_abstract_html_url", url)}
-      {a.pdf_path ? m("citation_pdf_url", publicFileUrl("articles", a.pdf_path).startsWith("/") ? `${SITE_URL}${publicFileUrl("articles", a.pdf_path)}` : publicFileUrl("articles", a.pdf_path)) : null}
+      {/* full text under the article's own address, as Scholar requires */}
+      {a.pdf_path ? m("citation_pdf_url", `${url}/full-text.pdf`) : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "ScholarlyArticle",
