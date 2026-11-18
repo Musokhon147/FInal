@@ -141,7 +141,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </ol>
         <div className="mt-10 flex flex-wrap items-center gap-4">
           <Link href="/dashboard/submit" className="btn-primary px-6 py-3">{t("home.cta")}</Link>
-          <Link href="/p/author-guidelines" className="text-sm font-semibold text-brand-700 hover:underline">{t("nav.forAuthors")}</Link>
+          <Link href="/for-authors" className="text-sm font-semibold text-brand-700 hover:underline">{t("nav.forAuthors")}</Link>
         </div>
       </section>
 

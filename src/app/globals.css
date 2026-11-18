@@ -295,3 +295,9 @@ body { overflow-x: clip; }
 .pdf-btn.px-3 { font-size: .85rem; font-weight: 600; }
 .pdf-page.is-drawn .pdf-page-skel { display: none; }
 .pdf-viewer:fullscreen { border-radius: 0; background: rgb(var(--s100)); }
+
+/* ---- publication type picker ---- */
+.pub-type { border-width: 1.5px; }
+.pub-type:hover { border-color: rgb(var(--b600) / 0.5); }
+.pub-type.is-on { border-color: rgb(var(--acc)); background: rgb(var(--acc) / 0.08); box-shadow: 0 0 0 3px rgb(var(--acc) / 0.15); }
+.pub-type:has(input:focus-visible) { outline: 2px solid rgb(var(--acc)); outline-offset: 2px; }

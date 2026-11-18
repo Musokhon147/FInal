@@ -243,9 +243,13 @@ export async function saveSettings(input: {
 export async function saveMember(id: string | null, input: {
   full_name: Record<string, string>; position: Record<string, string>; affiliation: Record<string, string>;
   position_type: "chief" | "deputy" | "member"; sort_order: number; photo_url?: string | null;
+  academic_degree?: Record<string, string>; email?: string | null;
 }) {
   const { supabase } = await staff();
+  if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) throw new Error("bad-email");
   const row: Record<string, unknown> = { ...input };
+  // board members review for the journal: a registered user with this email becomes a reviewer
+  if (input.email) await supabase.from("profiles").update({ is_reviewer: true }).eq("email", input.email);
   if (input.photo_url === undefined) delete row.photo_url;
   if (id) {
     const { error } = await supabase.from("editorial_board").update(row).eq("id", id);
@@ -304,6 +308,7 @@ export async function saveConference(formData: FormData) {
     start_date: str(formData, "start_date"),
     end_date: str(formData, "end_date") || null,
     registration_deadline: str(formData, "registration_deadline") || null,
+    scope: str(formData, "scope") === "international" ? "international" : "local",
   };
   if (id) {
     const { error } = await supabase.from("conferences").update(row).eq("id", id);
@@ -414,4 +419,35 @@ export async function importArticles(rows: ImportRow[], skipExistingDoi: boolean
   }
   done();
   return { added, skipped };
+}
+
+/* ---------- issue details: title, conference, cover, whole-issue PDF ---------- */
+
+export async function saveIssue(id: string, input: {
+  title: Record<string, string>; description: Record<string, string>; conference_id: string | null;
+  cover_url?: string | null; pdf_path?: string | null;
+}) {
+  const { supabase } = await staff();
+  const row: Record<string, unknown> = { title: input.title, description: input.description, conference_id: input.conference_id || null };
+  if (input.cover_url !== undefined) row.cover_url = input.cover_url;
+  if (input.pdf_path !== undefined) row.pdf_path = input.pdf_path;
+  const { error } = await supabase.from("issues").update(row).eq("id", id);
+  if (error) throw new Error(error.message);
+  done();
+}
+
+/* ---------- "For authors": guidance and sample PDF per publication type ---------- */
+
+export async function saveAuthorKits(kits: Record<string, { guide: Record<string, string>; template: string | null }>) {
+  const { supabase } = await staff();
+  const { PUB_TYPES } = await import("@/lib/pubtypes");
+  const clean = Object.fromEntries(PUB_TYPES.map((k) => [k, {
+    guide: cleanI18nHtml(kits[k]?.guide ?? {}),
+    template: kits[k]?.template || null,
+  }]));
+  const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
+  const { error } = await supabase.from("journals").update({ author_kits: clean }).eq("id", j?.id ?? "");
+  if (error) throw new Error(error.message);
+  revalidatePath("/[locale]/for-authors", "page");
+  done();
 }

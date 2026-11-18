@@ -4,7 +4,7 @@ import { dateRange } from "@/lib/data";
 import type { Conference } from "@/lib/types";
 
 /** Calendar-style card: big start day, title, dates and place. */
-export default function ConferenceCard({ c, locale, note }: { c: Conference; locale: string; note?: string }) {
+export default function ConferenceCard({ c, locale, note, scopeLabel }: { c: Conference; locale: string; note?: string; scopeLabel?: string }) {
   const d = new Date(c.start_date + "T00:00:00");
   const month = locale === "uz"
     ? ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"][d.getMonth()]
@@ -17,6 +17,7 @@ export default function ConferenceCard({ c, locale, note }: { c: Conference; loc
           <span className="mt-1 text-xs text-accent">{month} {d.getFullYear()}</span>
         </div>
         <div className="min-w-0">
+          {scopeLabel && <span className={`mb-2 inline-block rounded px-1.5 py-0.5 text-[11px] ${c.scope === "international" ? "bg-accent/15 text-accent" : "bg-brand-50 text-brand-700"}`}>{scopeLabel}</span>}
           <h3 className="text-lg leading-snug transition group-hover:text-brand-700">{tr(c.title, locale)}</h3>
           <p className="mt-2 text-sm text-slate-500">{dateRange(c.start_date, c.end_date, locale)}</p>
           <p className="text-sm text-slate-500">{tr(c.location, locale)}</p>

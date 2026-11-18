@@ -16,6 +16,10 @@ export const getJournal = cache(async () => {
   return data;
 });
 
+/** Where a CMS page lives. The author guidelines page is shown inside "For authors" (with the per-type samples). */
+export const pageHref = (slug: string) => (slug === AUTHOR_PAGE ? "/for-authors" : `/p/${slug}`);
+export const AUTHOR_PAGE = "author-guidelines";
+
 export const getMenuPages = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase
@@ -95,6 +99,11 @@ export function splitConferences<T extends { start_date: string; end_date: strin
   const upcoming = list.filter((c) => (c.end_date ?? c.start_date) >= today).sort((a, b) => a.start_date.localeCompare(b.start_date));
   const past = list.filter((c) => (c.end_date ?? c.start_date) < today).sort((a, b) => b.start_date.localeCompare(a.start_date));
   return { upcoming, past };
+}
+/** Conferences authors can still send theses to: upcoming ones, plus those that ended in the last 60 days (proceedings still being collected). */
+export function upcomingConferences<T extends { start_date: string; end_date: string | null }>(list: T[]) {
+  const cutoff = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+  return list.filter((c) => (c.end_date ?? c.start_date) >= cutoff).sort((a, b) => a.start_date.localeCompare(b.start_date));
 }
 export function daysUntil(date: string | null | undefined) {
   if (!date) return null;

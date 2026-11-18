@@ -36,6 +36,16 @@ export default async function EditConference({ params }: PageProps<"/[locale]/ad
         <input type="hidden" name="id" value={c?.id ?? ""} />
         <I18nFields name="title" label={t("common.title")} value={c?.title} required />
         <I18nFields name="location" label={t("x.location")} value={c?.location} />
+        <fieldset className="space-y-2">
+          <legend className="label">{t("pt.scope")}</legend>
+          <div className="flex flex-wrap gap-3">
+            {(["local", "international"] as const).map((k) => (
+              <label key={k} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="radio" name="scope" value={k} defaultChecked={(c?.scope ?? "local") === k} /> {t(`pt.${k}`)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="grid gap-3 sm:grid-cols-3">
           <label><span className="label">{t("x.startDate")}</span><input type="date" name="start_date" defaultValue={c?.start_date ?? ""} className="input" required /></label>
           <label><span className="label">{t("x.endDate")}</span><input type="date" name="end_date" defaultValue={c?.end_date ?? ""} className="input" /></label>

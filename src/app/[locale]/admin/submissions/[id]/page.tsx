@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { scopeOf } from "@/lib/pubtypes";
+import type { PubType } from "@/lib/types";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { initLocale } from "@/lib/locale";
@@ -15,6 +17,16 @@ import PublishForm from "./PublishForm";
 import CancelReviewButton from "./CancelReviewButton";
 
 const DECISIONS = ["desk_review", "under_review", "revision_required", "accepted", "rejected"] as const;
+
+type IssueChoice = { id: string; number: number; is_special: boolean; status: string; conference_id: string | null; volumes: { number: number; year: number } | null; conferences: { scope: "local" | "international"; title: I18nText } | null };
+
+/** Issues that fit the submission's type: journal issues for articles, collections of the matching conference type for theses (its own conference first). */
+function issuesFor(type: PubType, conferenceId: string | null, all: IssueChoice[]) {
+  const scope = scopeOf(type);
+  const fit = all.filter((i) => (scope ? i.conferences?.scope === scope : !i.conference_id));
+  const list = fit.length ? fit : all; // nothing set up yet: let the editor choose any issue
+  return [...list].sort((a, b) => Number(b.conference_id === conferenceId && !!conferenceId) - Number(a.conference_id === conferenceId && !!conferenceId));
+}
 
 export default async function AdminSubmission({ params }: PageProps<"/[locale]/admin/submissions/[id]">) {
   const locale = await initLocale(params);
@@ -36,7 +48,7 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
       supabase.from("submission_events").select("id, to_status, note, created_at").eq("submission_id", id).order("id"),
       supabase.from("review_assignments").select("*, profiles(full_name, email)").eq("submission_id", id).order("round").order("created_at"),
       supabase.from("profiles").select("id, full_name, email").eq("is_reviewer", true).order("full_name"),
-      supabase.from("issues").select("id, number, is_special, status, volumes(number, year)").order("created_at", { ascending: false }).limit(30),
+      supabase.from("issues").select("id, number, is_special, status, conference_id, title, volumes(number, year), conferences(scope, title)").order("created_at", { ascending: false }).limit(60),
       supabase.from("articles").select("id").eq("submission_id", id).maybeSingle(),
     ]);
   const reviewList = (reviews ?? []) as (ReviewAssignment & { profiles: { full_name: string; email: string } | null })[];
@@ -53,6 +65,7 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
               <StatusBadge status={s.status} />
               {s.sections && <span className="text-xs uppercase text-accent">{tr(s.sections.title, locale)}</span>}
               <span className="text-xs text-slate-500">{t(`langs.${s.language as "uz"}`)}</span>
+              <span className={`rounded px-1.5 py-0.5 text-[11px] ${s.pub_type === "journal" ? "bg-slate-200 text-slate-600" : "bg-accent/15 text-accent"}`}>{t(`pt.${s.pub_type ?? "journal"}`)}</span>
             </div>
             <h1 className="text-2xl">{s.title}</h1>
             <p className="mt-2 text-sm text-slate-600">
@@ -179,9 +192,9 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
           {s.status === "accepted" && !article && (
             <PublishForm
               submissionId={s.id}
-              issues={((issues ?? []) as unknown as { id: string; number: number; is_special: boolean; status: string; volumes: { number: number; year: number } | null }[]).map((i) => ({
+              issues={issuesFor(s.pub_type ?? "journal", s.conference_id ?? null, (issues ?? []) as unknown as IssueChoice[]).map((i) => ({
                 id: i.id,
-                label: `${issueLabel(t, i)}${i.status === "draft" ? " (draft)" : ""}`,
+                label: `${issueLabel(t, i)}${i.conferences ? ` · ${tr(i.conferences.title, locale)}` : ""}${i.status === "draft" ? " (draft)" : ""}`,
               }))}
             />
           )}

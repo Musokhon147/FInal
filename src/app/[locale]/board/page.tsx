@@ -34,7 +34,7 @@ export default async function BoardPage({ params }: PageProps<"/[locale]/board">
   const locale = await initLocale(params);
   const t = await getTranslations();
   const supabase = await createClient();
-  const { data } = await supabase.from("editorial_board").select("*").order("sort_order");
+  const { data } = await supabase.from("editorial_board").select("id, full_name, position, affiliation, academic_degree, photo_url, orcid, position_type, sort_order").order("sort_order");
   const list = (data ?? []) as BoardMember[];
   // where our authors work: every author of every published article
   const { data: arts } = await supabase.from("articles").select("authors").eq("status", "published");
@@ -54,6 +54,7 @@ export default async function BoardPage({ params }: PageProps<"/[locale]/board">
       <div>
         <p className="font-semibold text-slate-900">{tr(m.full_name, locale)}</p>
         <p className="text-sm text-accent">{tr(m.position, locale)}</p>
+        {tr(m.academic_degree ?? {}, locale) && <p className="text-sm text-slate-700">{tr(m.academic_degree ?? {}, locale)}</p>}
         <p className="text-sm text-slate-500">{tr(m.affiliation, locale)}</p>
       </div>
     </li>
@@ -67,7 +68,8 @@ export default async function BoardPage({ params }: PageProps<"/[locale]/board">
           <div>
             <p className="text-sm text-accent">{t("x.g_chief")}</p>
             <p className="mt-1 font-serif text-3xl text-slate-900">{tr(m.full_name, locale)}</p>
-            <p className="mt-2 text-slate-500">{tr(m.affiliation, locale)}</p>
+            {tr(m.academic_degree ?? {}, locale) && <p className="mt-2 text-slate-700">{tr(m.academic_degree ?? {}, locale)}</p>}
+            <p className="mt-1 text-slate-500">{tr(m.affiliation, locale)}</p>
           </div>
         </section>
       ))}

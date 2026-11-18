@@ -15,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ConferencesPage({ params }: PageProps<"/[locale]/conferences">) {
   const locale = await initLocale(params);
   const t = await getTranslations("x");
+  const tp = await getTranslations("pt");
   const supabase = await createClient();
   const { data } = await supabase.from("conferences").select("*").order("start_date", { ascending: false });
   const { upcoming, past } = splitConferences((data ?? []) as Conference[]);
@@ -28,7 +29,7 @@ export default async function ConferencesPage({ params }: PageProps<"/[locale]/c
           <ul className="grid gap-5 md:grid-cols-2">
             {upcoming.map((c) => {
               const n = daysUntil(c.registration_deadline);
-              return <ConferenceCard key={c.id} c={c} locale={locale} note={n !== null ? t("daysLeft", { n }) : undefined} />;
+              return <ConferenceCard key={c.id} c={c} locale={locale} scopeLabel={tp(c.scope ?? "local")} note={n !== null ? t("daysLeft", { n }) : undefined} />;
             })}
           </ul>
         </section>
@@ -36,7 +37,7 @@ export default async function ConferencesPage({ params }: PageProps<"/[locale]/c
       {past.length > 0 && (
         <section className="mt-14">
           <h2 className="mb-6 text-xl">{t("past")}</h2>
-          <ul className="grid gap-5 md:grid-cols-2">{past.map((c) => <ConferenceCard key={c.id} c={c} locale={locale} />)}</ul>
+          <ul className="grid gap-5 md:grid-cols-2">{past.map((c) => <ConferenceCard key={c.id} c={c} locale={locale} scopeLabel={tp(c.scope ?? "local")} />)}</ul>
         </section>
       )}
     </div>

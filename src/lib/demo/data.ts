@@ -41,6 +41,32 @@ export function createSeed(): DemoDb {
       ru: "Принимаются статьи в выпуск 4 (декабрь 2026) по экономике, образованию и цифровым технологиям.",
       en: "Papers on economics, education and digital technology are welcome for Issue 4 (December 2026).",
     },
+    author_kits: {
+      journal: {
+        template: "templates/journal-article.pdf",
+        guide: {
+          uz: "<ul><li>Hajmi: 8–15 sahifa (A4, Times New Roman 14, interval 1,5).</li><li>UDK, sarlavha, mualliflar, ish joyi, ORCID.</li><li>Annotatsiya (150–250 so'z) va 5–8 kalit so'z uch tilda.</li><li>Kirish, adabiyotlar sharhi, metodologiya, natijalar, xulosa.</li><li>Adabiyotlar ro'yxati APA uslubida, kamida 15 manba.</li></ul><p>Maqolalar ikki tomonlama yashirin taqrizdan o'tadi. Plagiat ulushi 20% dan oshmasligi kerak.</p>",
+          ru: "<ul><li>Объём: 8–15 страниц (A4, Times New Roman 14, интервал 1,5).</li><li>УДК, название, авторы, место работы, ORCID.</li><li>Аннотация (150–250 слов) и 5–8 ключевых слов на трёх языках.</li><li>Введение, обзор литературы, методология, результаты, заключение.</li><li>Список литературы в стиле APA, не менее 15 источников.</li></ul><p>Статьи проходят двойное слепое рецензирование. Доля заимствований не более 20%.</p>",
+          en: "<ul><li>Length: 8–15 pages (A4, Times New Roman 14 pt, 1.5 spacing).</li><li>UDC, title, authors, affiliations, ORCID.</li><li>Abstract (150–250 words) and 5–8 keywords in three languages.</li><li>Introduction, literature review, methods, results, conclusion.</li><li>References in APA style, at least 15 sources.</li></ul><p>Articles go through double-blind peer review. Similarity must not exceed 20%.</p>",
+        },
+      },
+      local_conference: {
+        template: "templates/local-thesis.pdf",
+        guide: {
+          uz: "<ul><li>Hajmi: 2–4 sahifa.</li><li>Sarlavha, muallif(lar), ish joyi va qisqacha annotatsiya.</li><li>Asosiy matn va 3–5 manbadan iborat adabiyotlar ro'yxati.</li><li>Tezislar o'zbek, rus yoki ingliz tilida qabul qilinadi.</li></ul>",
+          ru: "<ul><li>Объём: 2–4 страницы.</li><li>Название, автор(ы), место работы и краткая аннотация.</li><li>Основной текст и список литературы из 3–5 источников.</li><li>Тезисы принимаются на узбекском, русском или английском языке.</li></ul>",
+          en: "<ul><li>Length: 2–4 pages.</li><li>Title, author(s), affiliation and a short abstract.</li><li>Main text and 3–5 references.</li><li>Theses are accepted in Uzbek, Russian or English.</li></ul>",
+        },
+      },
+      international_conference: {
+        template: "templates/international-thesis.pdf",
+        guide: {
+          uz: "<ul><li>Hajmi: 3–5 sahifa.</li><li>Sarlavha va annotatsiya ingliz tilida majburiy.</li><li>Mualliflar, ish joyi, mamlakat va ORCID.</li><li>Kamida 5 ta manba, shundan 2 tasi xorijiy.</li></ul>",
+          ru: "<ul><li>Объём: 3–5 страниц.</li><li>Название и аннотация на английском языке обязательны.</li><li>Авторы, место работы, страна и ORCID.</li><li>Не менее 5 источников, из них 2 зарубежных.</li></ul>",
+          en: "<ul><li>Length: 3–5 pages.</li><li>Title and abstract in English are required.</li><li>Authors, affiliation, country and ORCID.</li><li>At least 5 references, including 2 from outside Uzbekistan.</li></ul>",
+        },
+      },
+    },
   }];
 
   const sections = [
@@ -64,10 +90,14 @@ export function createSeed(): DemoDb {
     iss("iss-2-1", "vol-2", 1, "2025-03-01"), iss("iss-2-2", "vol-2", 2, "2025-07-01"), iss("iss-2-3", "vol-2", 3, "2025-11-01"),
     iss("iss-3-1", "vol-3", 1, "2026-03-01"), iss("iss-3-2", "vol-3", 2, "2026-07-01"),
     iss("iss-3-s1", "vol-3", 1, "2026-06-15", {
-      is_special: true, conference_id: "conf-1",
+      is_special: true, conference_id: "conf-1", pdf_path: "demo/collection-conf-1.pdf",
       title: { uz: "Xalqaro konferensiya materiallari", ru: "Материалы международной конференции", en: "International conference proceedings" },
     }),
-    iss("iss-3-3", "vol-3", 3, "2026-11-01"),
+    iss("iss-3-s2", "vol-3", 2, "2026-10-20", {
+      is_special: true, conference_id: "conf-3", pdf_path: "demo/collection-conf-3.pdf",
+      title: { uz: "Respublika konferensiyasi tezislari to'plami", ru: "Сборник тезисов республиканской конференции", en: "Collection of national conference theses" },
+    }),
+    iss("iss-3-3", "vol-3", 3, "2026-11-01", { pdf_path: "demo/issue-3-3.pdf" }),
     iss("iss-3-4", "vol-3", 4, null),
   ];
 
@@ -131,12 +161,20 @@ export function createSeed(): DemoDb {
       [{ name: "Shahzod Nazarov", affiliation: "Tashkent University of Information Technologies, Uzbekistan" }],
       "en", ["e-government", "digital services", "public administration", "digital economy"],
       "This review traces the development of the my.gov.uz portal and related public digital services over ten years."),
+    art("iss-3-s2", S3, [3, 5], "Yoshlar tadbirkorligini qo'llab-quvvatlashda mahalla institutining roli",
+      [{ name: "Ergashev Sardor", affiliation: uni("Namangan davlat universiteti, Namangan") }],
+      "uz", ["yoshlar tadbirkorligi", "mahalla", "kichik biznes"],
+      "Tezisda mahalla darajasida yoshlar tadbirkorligini qo'llab-quvvatlash mexanizmlari tahlil qilinadi."),
+    art("iss-3-s2", S3, [6, 8], "Qishloq xo'jaligida suvni tejovchi texnologiyalarni joriy etish",
+      [{ name: "Xolmatova Zarina", affiliation: uni("Andijon qishloq xo'jaligi instituti, Andijon") }],
+      "uz", ["suv tejash", "tomchilatib sug'orish", "qishloq xo'jaligi"],
+      "Tezisda Andijon viloyati fermer xo'jaliklarida tomchilatib sug'orishni joriy etish natijalari keltiriladi."),
   ];
   articles.forEach((a: any) => { a.full_text = demoFullText(a); });
 
   // ---------------- submissions in different workflow stages
   const sub = (id: string, submitter: string, status: string, title: string, created: string, extra: any = {}) => ({
-    id, journal_id: J, section_id: S1, submitter_id: submitter, editor_id: status === "submitted" ? null : "u-admin", status, title,
+    id, journal_id: J, section_id: S1, submitter_id: submitter, editor_id: status === "submitted" ? null : "u-admin", status, title, pub_type: "journal", conference_id: null,
     abstract: "Ushbu tadqiqotda masalaning nazariy asoslari, amaliy holati va takomillashtirish yo'llari ko'rib chiqiladi. (Demo annotatsiya.)",
     keywords: ["demo", "tadqiqot", "tahlil"], language: "uz", references: "1. [Reference]\n2. [Reference]",
     cover_letter: null, decision_note: null, similarity_percent: null, similarity_note: null, submitted_at: d(created), created_at: d(created), updated_at: d(created), ...extra,
@@ -147,7 +185,7 @@ export function createSeed(): DemoDb {
       decision_note: "Taqrizchilar izohlarini hisobga olib, metodika bo'limini kengaytiring va 2025-yil ma'lumotlarini qo'shing.",
     }),
     sub("sub-3", "u-author2", "accepted", "Green finance instruments for SMEs in Uzbekistan", "2026-08-12", { similarity_percent: 8.5, similarity_note: "Antiplagiat.ru, report #DEMO-1", language: "en", abstract: "This paper reviews green bonds and green credit lines available to small businesses. (Demo abstract.)", keywords: ["green finance", "SMEs"] }),
-    sub("sub-4", "u-author2", "submitted", "Student motivation in blended learning: evidence from Tashkent universities", "2026-11-11", { language: "en", abstract: "A survey of 600 students on motivation in blended courses. (Demo abstract.)", keywords: ["blended learning", "motivation"] }),
+    sub("sub-4", "u-author2", "submitted", "Student motivation in blended learning: evidence from Tashkent universities", "2026-11-11", { pub_type: "international_conference", conference_id: "conf-2", language: "en", abstract: "A survey of 600 students on motivation in blended courses. (Demo abstract.)", keywords: ["blended learning", "motivation"] }),
   ];
 
   const submission_authors = [
@@ -218,18 +256,21 @@ export function createSeed(): DemoDb {
   ];
 
   const editorial_board = [
-    { id: "eb-1", journal_id: J, sort_order: 1, position_type: "chief", photo_url: null, email: null, orcid: null,
+    { id: "eb-1", journal_id: J, sort_order: 1, position_type: "chief", photo_url: null, email: "j.abdullayev@demo.uz", orcid: null,
+      academic_degree: { uz: "Iqtisodiyot fanlari doktori (DSc), professor", ru: "Доктор экономических наук (DSc), профессор", en: "DSc in Economics, Professor" },
       full_name: { uz: "Abdullayev Jamshid", ru: "Абдуллаев Джамшид", en: "Jamshid Abdullayev" },
       position: { uz: "Bosh muharrir", ru: "Главный редактор", en: "Editor-in-Chief" },
-      affiliation: { uz: "i.f.d., professor, Toshkent", ru: "д.э.н., профессор, Ташкент", en: "DSc (Economics), Professor, Tashkent" } },
-    { id: "eb-2", journal_id: J, sort_order: 2, position_type: "deputy", photo_url: null, email: null, orcid: null,
+      affiliation: { uz: "Toshkent davlat iqtisodiyot universiteti", ru: "Ташкентский государственный экономический университет", en: "Tashkent State University of Economics" } },
+    { id: "eb-2", journal_id: J, sort_order: 2, position_type: "deputy", photo_url: null, email: "reviewer@demo.uz", orcid: null,
+      academic_degree: { uz: "Iqtisodiyot fanlari bo'yicha falsafa doktori (PhD), dotsent", ru: "Доктор философии по экономическим наукам (PhD), доцент", en: "PhD in Economics, Associate Professor" },
       full_name: { uz: "Sobirova Gulnora", ru: "Собирова Гульнора", en: "Gulnora Sobirova" },
       position: { uz: "Bosh muharrir o'rinbosari", ru: "Заместитель главного редактора", en: "Deputy Editor" },
-      affiliation: { uz: "PhD, dotsent, Samarqand", ru: "PhD, доцент, Самарканд", en: "PhD, Associate Professor, Samarkand" } },
-    { id: "eb-3", journal_id: J, sort_order: 3, position_type: "member", photo_url: null, email: null, orcid: null,
+      affiliation: { uz: "Samarqand davlat universiteti", ru: "Самаркандский государственный университет", en: "Samarkand State University" } },
+    { id: "eb-3", journal_id: J, sort_order: 3, position_type: "member", photo_url: null, email: "m.schmidt@demo.de", orcid: null,
+      academic_degree: { uz: "PhD", ru: "PhD", en: "PhD" },
       full_name: { uz: "Maria Schmidt", ru: "Мария Шмидт", en: "Maria Schmidt" },
       position: { uz: "Tahrir hay'ati a'zosi", ru: "Член редколлегии", en: "Editorial Board Member" },
-      affiliation: { uz: "PhD, Berlin, Germaniya", ru: "PhD, Берлин, Германия", en: "PhD, Berlin, Germany" } },
+      affiliation: { uz: "Berlin Gumboldt universiteti, Germaniya", ru: "Берлинский университет имени Гумбольдта, Германия", en: "Humboldt University of Berlin, Germany" } },
     ...[
       ["eb-4", "deputy", 2, ["Rahmonov Otabek", "Рахмонов Отабек", "Otabek Rakhmonov"], ["Bosh muharrir o'rinbosari", "Заместитель главного редактора", "Deputy Editor"], ["DSc, professor, Toshkent", "DSc, профессор, Ташкент", "DSc, Professor, Tashkent"]],
       ["eb-5", "member", 4, ["Kim Yuna", "Ким Юна", "Yuna Kim"], ["Tahrir hay'ati a'zosi", "Член редколлегии", "Editorial Board Member"], ["PhD, Seul, Koreya", "PhD, Сеул, Корея", "PhD, Seoul, Korea"]],
@@ -254,7 +295,7 @@ export function createSeed(): DemoDb {
   ];
 
   const conferences = [
-    { id: "conf-1", journal_id: J, start_date: "2026-05-20", end_date: "2026-05-21", registration_deadline: "2026-04-30", cover_url: null,
+    { id: "conf-1", journal_id: J, scope: "international", start_date: "2026-05-20", end_date: "2026-05-21", registration_deadline: "2026-04-30", cover_url: null,
       created_at: d("2026-01-15"), updated_at: d("2026-06-15"),
       title: { uz: "Raqamli iqtisodiyot va barqaror rivojlanish", ru: "Цифровая экономика и устойчивое развитие", en: "Digital Economy and Sustainable Development" },
       location: { uz: "Toshkent, O'zbekiston", ru: "Ташкент, Узбекистан", en: "Tashkent, Uzbekistan" },
@@ -263,7 +304,16 @@ export function createSeed(): DemoDb {
         ru: "<p>Международная научно-практическая конференция. Секции: цифровая экономика, зелёная энергетика, цифровые технологии в образовании.</p>",
         en: "<p>International research conference. Sections: digital economy, green energy, digital technology in education.</p>",
       } },
-    { id: "conf-2", journal_id: J, start_date: "2027-04-15", end_date: "2027-04-16", registration_deadline: "2027-03-20", cover_url: null,
+    { id: "conf-3", journal_id: J, scope: "local", start_date: "2026-10-10", end_date: "2026-10-10", registration_deadline: "2026-09-25", cover_url: null,
+      created_at: d("2026-08-01"), updated_at: d("2026-10-20"),
+      title: { uz: "Yosh olimlar respublika ilmiy-amaliy konferensiyasi", ru: "Республиканская научно-практическая конференция молодых учёных", en: "National Conference of Young Researchers" },
+      location: { uz: "Namangan, O'zbekiston", ru: "Наманган, Узбекистан", en: "Namangan, Uzbekistan" },
+      description: {
+        uz: "<p>Magistrantlar, tayanch doktorantlar va yosh olimlar uchun respublika konferensiyasi.</p>",
+        ru: "<p>Республиканская конференция для магистрантов, докторантов и молодых учёных.</p>",
+        en: "<p>A national conference for master's students, doctoral researchers and early-career scientists.</p>",
+      } },
+    { id: "conf-2", journal_id: J, scope: "international", start_date: "2027-04-15", end_date: "2027-04-16", registration_deadline: "2027-03-20", cover_url: null,
       created_at: d("2026-11-01"), updated_at: d("2026-11-01"),
       title: { uz: "Ta'lim sifati: Markaziy Osiyo tajribasi", ru: "Качество образования: опыт Центральной Азии", en: "Quality of Education: Central Asian Experience" },
       location: { uz: "Samarqand, O'zbekiston", ru: "Самарканд, Узбекистан", en: "Samarkand, Uzbekistan" },

@@ -2,8 +2,8 @@ import { ViewTransition } from "react";
 
 /** Generated tile-pattern cover for an issue, so the archive reads like a shelf. */
 export default function IssueCover({
-  id, number, isSpecial, volumeLabel, topic, size = "md",
-}: { id: string; number: number; isSpecial: boolean; volumeLabel: string; topic?: string; size?: "md" | "lg" }) {
+  id, number, isSpecial, volumeLabel, topic, size = "md", coverUrl, hasPdf,
+}: { id: string; number: number; isSpecial: boolean; volumeLabel: string; topic?: string; size?: "md" | "lg"; coverUrl?: string | null; hasPdf?: boolean }) {
   const hues: [string, string][] = [["#0a1d5c", "#3cc8bb"], ["#123a63", "#e8b13a"], ["#0b2c4f", "#79dfd5"], ["#1b1f5e", "#e8b13a"]];
   const seed = number + volumeLabel.length;
   const [bg, fg] = isSpecial ? ["#2a1846", "#e8b13a"] : hues[seed % hues.length];
@@ -17,6 +17,15 @@ export default function IssueCover({
     <span className="book-spine" style={{ background: `linear-gradient(90deg, ${bg}, color-mix(in srgb, ${bg} 70%, #000))` }} aria-hidden="true" />
     <span className="book-pages" aria-hidden="true" />
     <div className="book-front relative aspect-[3/4] w-full overflow-hidden rounded-r-xl rounded-l-sm ring-1 ring-white/10" style={{ background: bg }}>
+      {hasPdf && <span className="absolute right-2 top-2 z-20 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[#0a1d5c] shadow">PDF</span>}
+      {coverUrl ? (
+        <>
+          {/* uploaded cover, or the first page of the issue PDF */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          <span className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/35 to-transparent" aria-hidden="true" />
+        </>
+      ) : (<>
       {topic && <p className="absolute left-4 right-4 top-4 z-10 text-xs leading-snug text-[#cdd5e8]">{topic}</p>}
       <svg className="absolute inset-0 h-full w-full opacity-60" aria-hidden="true">
         <defs>
@@ -36,6 +45,7 @@ export default function IssueCover({
         <p className="mt-2 text-xs text-[#cdd5e8]">{volumeLabel}</p>
       </div>
       <span className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/35 to-transparent" aria-hidden="true" />
+      </>)}
     </div>
     </div>
     </div>

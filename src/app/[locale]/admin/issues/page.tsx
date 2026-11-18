@@ -10,7 +10,7 @@ import IssueToggle from "./IssueToggle";
 
 type Vol = {
   id: string; number: number; year: number;
-  issues: { id: string; number: number; is_special: boolean; title: I18nText; status: string; published_at: string | null; articles: { count: number }[] }[];
+  issues: { id: string; number: number; is_special: boolean; title: I18nText; status: string; published_at: string | null; pdf_path?: string | null; articles: { count: number }[] }[];
 };
 
 export default async function AdminIssues({ params }: PageProps<"/[locale]/admin/issues">) {
@@ -20,7 +20,7 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
   const journal = await getJournal();
   const { data } = await supabase
     .from("volumes")
-    .select("id, number, year, issues(id, number, is_special, title, status, published_at, articles(count))")
+    .select("id, number, year, issues(id, number, is_special, title, status, published_at, pdf_path, articles(count))")
     .order("number", { ascending: false });
   const volumes = (data ?? []) as Vol[];
   const { data: confs } = await supabase.from("conferences").select("id, title").order("start_date", { ascending: false });
@@ -79,6 +79,7 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
                   <td className="font-medium">
                     {i.is_special ? `${t("archives.special")} ${i.number}` : t("archives.issue", { n: i.number })}
                     {tr(i.title, locale) && <span className="block text-xs font-normal text-slate-500">{tr(i.title, locale)}</span>}
+                    {i.pdf_path && <span className="mt-1 inline-block rounded bg-brand-50 px-1.5 py-0.5 text-[11px] text-brand-700">PDF</span>}
                   </td>
                   <td>
                     <Link href={`/admin/articles?issue=${i.id}`} className="text-brand-600 hover:underline">
@@ -91,7 +92,10 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
                     </span>
                     {i.published_at && <span className="block text-xs text-slate-400">{formatDate(i.published_at, locale)}</span>}
                   </td>
-                  <td className="text-right"><IssueToggle id={i.id} published={i.status === "published"} /></td>
+                  <td className="whitespace-nowrap text-right">
+                    <Link href={`/admin/issues/${i.id}`} className="mr-3 text-sm text-brand-700 hover:underline">{t("pt.editIssue")}</Link>
+                    <IssueToggle id={i.id} published={i.status === "published"} />
+                  </td>
                 </tr>
               ))}
             </tbody>

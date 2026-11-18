@@ -49,6 +49,7 @@ export interface Journal {
   issn_online: string | null;
   publisher: string | null;
   cover_url: string | null;
+  author_kits?: AuthorKits;
   apc_amount: number;
   apc_currency: string;
   logo_url: string | null;
@@ -66,6 +67,8 @@ export interface BoardMember {
   photo_url: string | null;
   orcid: string | null;
   position_type: "chief" | "deputy" | "member";
+  academic_degree?: I18nText;
+  email: string | null;
   sort_order: number;
 }
 
@@ -78,6 +81,7 @@ export interface Conference {
   end_date: string | null;
   registration_deadline: string | null;
   cover_url: string | null;
+  scope: "local" | "international";
 }
 
 export interface NewsItem {
@@ -124,6 +128,7 @@ export interface Issue {
   status: "draft" | "published";
   published_at: string | null;
   conference_id: string | null;
+  pdf_path?: string | null;
 }
 
 export interface ArticleAuthor {
@@ -164,6 +169,8 @@ export interface Submission {
   id: string;
   journal_id: string;
   section_id: string | null;
+  pub_type: PubType;
+  conference_id?: string | null;
   submitter_id: string;
   editor_id: string | null;
   status: SubmissionStatus;
@@ -228,3 +235,7 @@ export interface CmsPage {
   show_in_menu: boolean;
   sort_order: number;
 }
+
+/** The three kinds of publication the journal accepts. */
+export type PubType = "journal" | "local_conference" | "international_conference";
+export type AuthorKits = Partial<Record<PubType, { guide?: I18nText; template?: string | null }>>;

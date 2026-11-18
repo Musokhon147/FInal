@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MAX_UPLOAD_BYTES, safeFileName } from "@/lib/files";
+import { PUB_TYPES, scopeOf } from "@/lib/pubtypes";
+import type { PubType } from "@/lib/types";
 
 type Author = { full_name: string; email: string; affiliation: string; orcid: string; is_corresponding: boolean };
 
@@ -14,12 +16,16 @@ type Props = {
   userId: string;
   sections: { id: string; title: string }[];
   me: Omit<Author, "is_corresponding">;
+  conferences: { id: string; title: string; scope: "local" | "international"; dates: string }[];
+  initialType: PubType;
 };
 
-export default function SubmitForm({ journalId, userId, sections, me }: Props) {
+export default function SubmitForm({ journalId, userId, sections, me, conferences, initialType }: Props) {
   const t = useTranslations();
   const router = useRouter();
   const [authors, setAuthors] = useState<Author[]>([{ ...me, is_corresponding: true }]);
+  const [pubType, setPubType] = useState<PubType>(initialType);
+  const confs = conferences.filter((c) => c.scope === scopeOf(pubType));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
@@ -44,6 +50,8 @@ export default function SubmitForm({ journalId, userId, sections, me }: Props) {
     if (n === 3) {
       const fd = new FormData(form);
       setSummary([
+        [t("pt.type"), t(`pt.${pubType}`)],
+        ...(pubType !== "journal" ? [[t("pt.chooseConference"), confs.find((c) => c.id === fd.get("conference_id"))?.title ?? t("pt.anyConference")] as [string, string]] : []),
         [t("submit.section"), sections.find((x) => x.id === fd.get("section_id"))?.title ?? ""],
         [t("submit.articleTitle"), String(fd.get("title") ?? "")],
         [t("submit.language"), t(`langs.${fd.get("language") as "uz"}`)],
@@ -92,6 +100,8 @@ export default function SubmitForm({ journalId, userId, sections, me }: Props) {
           journal_id: journalId,
           section_id: form.get("section_id") || null,
           submitter_id: userId,
+          pub_type: pubType,
+          conference_id: pubType !== "journal" ? form.get("conference_id") || null : null,
           title: String(form.get("title")).trim(),
           abstract: String(form.get("abstract")).trim(),
           keywords: String(form.get("keywords"))
@@ -158,6 +168,29 @@ export default function SubmitForm({ journalId, userId, sections, me }: Props) {
       </div>
 
       <div data-panel="0" hidden={step !== 0} className="space-y-5">
+        <fieldset>
+          <legend className="label">{t("pt.chooseType")}</legend>
+          <div className="mt-1 grid gap-3 sm:grid-cols-3">
+            {PUB_TYPES.map((k) => (
+              <label key={k} className={`pub-type card cursor-pointer p-4 transition ${pubType === k ? "is-on" : ""}`}>
+                <input type="radio" name="pub_type" value={k} checked={pubType === k} onChange={() => setPubType(k)} className="sr-only" />
+                <span className="block font-semibold text-slate-900">{t(`pt.${k}`)}</span>
+                <span className="mt-1 block text-xs text-slate-500">{t(`pt.${k === "journal" ? "journalDesc" : k === "local_conference" ? "localDesc" : "internationalDesc"}`)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {pubType !== "journal" && (
+          confs.length ? (
+            <div>
+              <label className="label" htmlFor="conference_id">{t("pt.chooseConference")}</label>
+              <select className="input" id="conference_id" name="conference_id" defaultValue={confs[0]?.id}>
+                {confs.map((c) => <option key={c.id} value={c.id}>{c.title} · {c.dates}</option>)}
+                <option value="">{t("pt.anyConference")}</option>
+              </select>
+            </div>
+          ) : <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t("pt.noConferences")}</p>
+        )}
         {sections.length > 0 && (
           <div>
             <label className="label" htmlFor="section_id">{t("submit.section")}</label>

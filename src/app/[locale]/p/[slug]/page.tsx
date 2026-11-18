@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { initLocale } from "@/lib/locale";
+import { permanentRedirect } from "@/i18n/navigation";
+import { AUTHOR_PAGE } from "@/lib/data";
 import { alternates } from "@/lib/site";
 import { cleanHtml } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
@@ -24,6 +26,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/p/[slug]
 export default async function StaticPage({ params }: PageProps<"/[locale]/p/[slug]">) {
   const locale = await initLocale(params);
   const { slug } = await params;
+  if (slug === AUTHOR_PAGE) permanentRedirect({ href: "/for-authors", locale });
   const page = await load(slug);
   if (!page) notFound();
 

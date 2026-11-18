@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getJournal, getMenuPages } from "@/lib/data";
+import { getJournal, getMenuPages, pageHref } from "@/lib/data";
 import { tr } from "@/lib/i18n-field";
 import { Logo } from "./design/StarMark";
 
@@ -21,7 +21,7 @@ export default async function Footer() {
           <li><Link href="/news" className="navlink">{t("nav.news")}</Link></li>
           <li><Link href="/conferences" className="navlink">{t("nav.conferences")}</Link></li>
           <li><Link href="/explore" className="navlink">{t("x.explore")}</Link></li>
-          {pages.map((p) => <li key={p.id}><Link href={`/p/${p.slug}`} className="navlink">{tr(p.title, locale)}</Link></li>)}
+          {pages.map((p) => <li key={p.id}><Link href={pageHref(p.slug)} className="navlink">{tr(p.title, locale)}</Link></li>)}
         </ul>
         <div className="space-y-2 text-sm text-slate-500">
           {journal?.issn_online && <p>ISSN {journal.issn_online} (online)</p>}

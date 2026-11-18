@@ -10,7 +10,7 @@ import { createSeed, type DemoDb } from "./data";
 export const DEMO_COOKIE = "demo_uid";
 
 type Filter =
-  | { op: "eq" | "neq"; col: string; val: any }
+  | { op: "eq" | "neq" | "is"; col: string; val: any }
   | { op: "in"; col: string; val: any[] }
   | { op: "text"; col: string; val: string }
   | { op: "or"; val: string };
@@ -110,6 +110,8 @@ function matches(row: any, f: Filter): boolean {
       return row[f.col] === f.val;
     case "neq":
       return row[f.col] !== f.val;
+    case "is":
+      return f.val === null ? row[f.col] == null : row[f.col] === f.val;
     case "in":
       return f.val.includes(row[f.col]);
     case "text": {
@@ -303,6 +305,12 @@ function runRpc(name: string, args: any, uid: string | null): Result {
       .map((r: any) => ({ round: r.round, recommendation: r.recommendation, comments_to_author: r.comments_to_author, completed_at: r.completed_at }));
     return { data, error: null };
   }
+  if (name === "board_member_emails") {
+    const me = db().profiles.find((p: any) => p.id === uid);
+    if (!me || !["editor", "admin"].includes(me.role)) return { data: [], error: null };
+    return { data: db().editorial_board.filter((b: any) => b.email).map((b: any) => ({
+      id: b.id, email: b.email, registered: db().profiles.some((p: any) => p.email?.toLowerCase() === b.email.toLowerCase()) })), error: null };
+  }
   if (name === "journal_numbers") {
     const decided = ["accepted", "rejected", "revision_required"];
     const days: number[] = [];
@@ -355,6 +363,7 @@ class QB implements PromiseLike<Result> {
   delete() { this.q.action = "delete"; return this; }
   eq(col: string, val: any) { this.q.filters.push({ op: "eq", col, val }); return this; }
   neq(col: string, val: any) { this.q.filters.push({ op: "neq", col, val }); return this; }
+  is(col: string, val: any) { this.q.filters.push({ op: "is", col, val }); return this; }
   in(col: string, val: any[]) { this.q.filters.push({ op: "in", col, val }); return this; }
   textSearch(col: string, val: string) { this.q.filters.push({ op: "text", col, val }); return this; }
   or(val: string) { this.q.filters.push({ op: "or", val }); return this; }

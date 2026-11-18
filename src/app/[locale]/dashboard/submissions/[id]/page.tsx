@@ -38,7 +38,10 @@ export default async function MySubmissionPage({ params }: PageProps<"/[locale]/
       <div className="space-y-6">
         <Link href="/dashboard" className="text-sm text-brand-600 hover:underline">← {t("common.back")}</Link>
         <div className="card">
-          <div className="mb-2"><StatusBadge status={s.status} /></div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <StatusBadge status={s.status} />
+            <span className={`rounded px-1.5 py-0.5 text-[11px] ${(s.pub_type ?? "journal") === "journal" ? "bg-slate-200 text-slate-600" : "bg-accent/15 text-accent"}`}>{t(`pt.${s.pub_type ?? "journal"}`)}</span>
+          </div>
           <h1 className="text-2xl">{s.title}</h1>
           <p className="mt-2 text-sm text-slate-600">
             {((authors ?? []) as SubmissionAuthor[]).map((a) => a.full_name).join(", ")}

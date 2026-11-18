@@ -10,12 +10,14 @@ import { formatDate, tr } from "@/lib/i18n-field";
 import { issueLabel } from "@/lib/issue-label";
 import ArticleList, { ARTICLE_LIST_SELECT, topicOf, type ListedArticle } from "@/components/public/ArticleList";
 import IssueCover from "@/components/design/IssueCover";
+import PdfViewer from "@/components/public/PdfViewer";
+import { publicFileUrl } from "@/lib/supabase/env";
 
 async function load(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("issues")
-    .select("*, volumes(number, year), conferences(id, title)")
+    .select("*, volumes(number, year), conferences(id, title, scope)")
     .eq("id", id)
     .maybeSingle();
   return data;
@@ -50,13 +52,20 @@ export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[
     <div>
       <nav className="mb-4 text-sm text-slate-500">
         <Link href="/" className="hover:text-slate-900">{t("nav.home")}</Link> /{" "}
-        <Link href="/archives" className="hover:text-slate-900">{t("nav.archives")}</Link> / {issueLabel(t, issue)}
+        <Link href="/archives" className="hover:text-slate-900">{t("nav.archives")}</Link> /{" "}
+        {issue.conferences && (
+          <><Link href={`/archives?type=${issue.conferences.scope === "international" ? "international" : "local"}`} className="hover:text-slate-900">
+            {t(issue.conferences.scope === "international" ? "pt.internationalShort" : "pt.localShort")}
+          </Link> / </>
+        )}
+        {issueLabel(t, issue)}
       </nav>
       <div className="grid gap-8 md:grid-cols-[240px_1fr]">
       <div className="md:sticky md:top-28 md:self-start">
         <IssueCover id={issue.id} number={issue.number} isSpecial={issue.is_special} size="lg"
           volumeLabel={issue.volumes ? t("archives.volume", { n: issue.volumes.number, year: issue.volumes.year }) : ""}
-          topic={topicOf((articles ?? []) as unknown as ListedArticle[])} />
+          topic={topicOf((articles ?? []) as unknown as ListedArticle[])} coverUrl={issue.cover_url} hasPdf={!!issue.pdf_path} />
+        {issue.pdf_path && <a href={publicFileUrl("articles", issue.pdf_path)} className="btn-primary mt-5 w-full justify-center" download>{t("pt.fullPdf")}</a>}
       </div>
       <div className="card">
         <h1 className="text-3xl">{issueLabel(t, issue)}</h1>
@@ -74,6 +83,12 @@ export default async function IssuePage({ params }: PageProps<"/[locale]/issue/[
         )}
         {tr(issue.description, locale) && (
           <div className="prose-content mt-4 text-slate-700" dangerouslySetInnerHTML={{ __html: cleanHtml(tr(issue.description, locale)) }} />
+        )}
+        {issue.pdf_path && (
+          <section className="mt-8" aria-labelledby="whole-issue">
+            <h2 id="whole-issue" className="border-b border-slate-200 pb-2 text-xl">{t("pt.wholeIssue")}</h2>
+            <PdfViewer url={publicFileUrl("articles", issue.pdf_path)} downloadHref={publicFileUrl("articles", issue.pdf_path)} />
+          </section>
         )}
         <h2 className="mt-8 border-b border-slate-200 pb-2 text-xl">{t("issue.articles")}</h2>
         <ArticleList articles={(articles ?? []) as unknown as ListedArticle[]} />

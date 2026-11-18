@@ -21,6 +21,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
     ["/admin/board", tn("nav.board")],
     ["/admin/news", tn("x.news")],
     ["/admin/conferences", tn("x.conferences")],
+    ["/admin/for-authors", tn("pt.forAuthorsAdmin")],
     ["/admin/emails", tn("adm.emails")],
     ["/admin/log", tn("adm.log")],
     ["/admin/import", tn("adm.import")],

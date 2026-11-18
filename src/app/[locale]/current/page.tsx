@@ -9,6 +9,7 @@ export default async function CurrentIssue({ params }: PageProps<"/[locale]/curr
     .from("issues")
     .select("id")
     .eq("status", "published")
+    .is("conference_id", null) // journal issues only; conference collections have their own page
     .order("published_at", { ascending: false })
     .limit(1)
     .maybeSingle();
