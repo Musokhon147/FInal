@@ -3,7 +3,7 @@
 import { celebrate } from "@/lib/celebrate";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { uploadArticlePdf } from "@/components/admin/uploadPdf";
 import { extractPdfText } from "@/components/admin/extractPdfText";
 import { publishSubmission } from "../../actions";
@@ -40,14 +40,26 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
     }
   }
 
+  if (!issues.length) {
+    return (
+      <div className="card space-y-3 border-accent/60">
+        <h2 className="text-lg">{t("admin.publish")}</h2>
+        <p className="text-sm text-slate-600">{t("pt.noIssuesYet")}</p>
+        <Link href="/admin/issues" className="btn-primary w-full justify-center">{t("pt.createIssue")}</Link>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="card space-y-3 border-brand-600/50">
       <h2 className="text-lg">{t("admin.publish")}</h2>
+      <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">{t("pt.acceptedNotLive")}</p>
       <div>
         <label className="label">{t("admin.selectIssue")}</label>
         <select name="issue_id" className="input" required>
           {issues.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}
         </select>
+        <p className="mt-1 text-xs text-slate-500">{t("pt.issueDraftHint")}</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div><label className="label">{t("admin.firstPage")}</label><input name="first_page" type="number" min={1} className="input" /></div>

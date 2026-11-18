@@ -602,6 +602,10 @@
     "forAuthorsLead": "Choose the type of publication: read the requirements, download the sample and send your work.",
     "pdfOnly": "PDF files only",
     "editAbout": "\"About the journal\" and other pages",
-    "account": "My account"
+    "account": "My account",
+    "acceptedNotLive": "Accepted, but not on the website yet. Publish it into an issue below to make it appear.",
+    "noIssuesYet": "You need an issue to publish into. Create a volume and an issue on the Issues page, then come back here.",
+    "createIssue": "Create an issue",
+    "issueDraftHint": "If the issue isn't published yet, the article appears on the site when the issue is published."
   }
 }

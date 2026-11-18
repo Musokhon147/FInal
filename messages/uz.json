@@ -602,6 +602,10 @@
     "forAuthorsLead": "Nashr turini tanlang: talablarni o'qing, namunani yuklab oling va materialingizni yuboring.",
     "pdfOnly": "Faqat PDF fayl",
     "editAbout": "\"Jurnal haqida\" va boshqa sahifalar",
-    "account": "Hisobim"
+    "account": "Hisobim",
+    "acceptedNotLive": "Qabul qilingan, lekin hali saytda ko'rinmaydi. Ko'rinishi uchun uni quyida songa nashr eting.",
+    "noIssuesYet": "Nashr etish uchun avval son kerak. Sonlar sahifasida yangi jild va son yarating, so'ng shu sahifaga qayting.",
+    "createIssue": "Son yaratish",
+    "issueDraftHint": "Son hali nashr etilmagan bo'lsa, maqola son nashr etilganda saytda paydo bo'ladi."
   }
 }
