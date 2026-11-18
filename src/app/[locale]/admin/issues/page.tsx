@@ -26,10 +26,25 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
   const { data: confs } = await supabase.from("conferences").select("id, title").order("start_date", { ascending: false });
   const conferences = (confs ?? []) as { id: string; title: I18nText }[];
   const nextVol = (volumes[0]?.number ?? 0) + 1;
+  // accepted manuscripts not yet published: shown on top so the next step is obvious
+  const { data: waiting } = await supabase.from("submissions").select("id, title").eq("status", "accepted").order("updated_at", { ascending: false });
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl">{t("admin.issues")}</h1>
+      {(waiting ?? []).length > 0 && (
+        <div className="card border-accent/60">
+          <h2 className="text-lg">{t("pt.waitingPublish")}</h2>
+          <ul className="mt-3 divide-y divide-slate-200/70">
+            {((waiting ?? []) as { id: string; title: string }[]).map((w) => (
+              <li key={w.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                <span className="text-slate-900">{w.title}</span>
+                <Link href={`/admin/submissions/${w.id}`} className="btn-secondary text-sm">{t("pt.publishNow")} →</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <form action={createVolume} className="card space-y-3">
@@ -72,6 +87,14 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
       {volumes.map((v) => (
         <div key={v.id} className="card">
           <h2 className="mb-3 text-xl">{t("archives.volume", { n: v.number, year: v.year })}</h2>
+          {v.issues.length === 0 && (
+            <form action={createIssue} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 p-4">
+              <p className="text-sm text-slate-600">{t("pt.noIssuesInVolume")}</p>
+              <input type="hidden" name="volume_id" value={v.id} />
+              <input type="hidden" name="number" value="1" />
+              <button className="btn-primary">+ {t("pt.addIssueN", { n: 1 })}</button>
+            </form>
+          )}
           <table className="table">
             <tbody>
               {[...v.issues].sort((a, b) => b.number - a.number).map((i) => (

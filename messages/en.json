@@ -606,6 +606,10 @@
     "acceptedNotLive": "Accepted, but not on the website yet. Publish it into an issue below to make it appear.",
     "noIssuesYet": "You need an issue to publish into. Create a volume and an issue on the Issues page, then come back here.",
     "createIssue": "Create an issue",
-    "issueDraftHint": "If the issue isn't published yet, the article appears on the site when the issue is published."
+    "issueDraftHint": "If the issue isn't published yet, the article appears on the site when the issue is published.",
+    "noIssuesInVolume": "This volume has no issues yet. Add an issue to publish articles in it.",
+    "addIssueN": "Add issue No. {n}",
+    "waitingPublish": "Accepted articles waiting to be published",
+    "publishNow": "Publish"
   }
 }
