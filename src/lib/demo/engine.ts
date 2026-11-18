@@ -412,9 +412,12 @@ export function createDemoClient(t: Transport) {
           orcid: null, role: "user", is_reviewer: false, preferred_locale: options?.data?.locale ?? "uz", created_at: now(),
         };
         store.profiles.push(p);
+        // demo preview of the "check your inbox" screen: addresses like name+confirm@example.com
+        if (/\+confirm@/i.test(String(email))) return { data: { user: { id: p.id, email }, session: null }, error: null };
         t.setUid?.(p.id);
         return { data: { user: { id: p.id, email }, session: {} }, error: null };
       },
+      resend: async () => ({ data: {}, error: null }),
       signOut: async () => { t.setUid?.(null); return { error: null }; },
       exchangeCodeForSession: async () => ({ data: {}, error: null }),
     },

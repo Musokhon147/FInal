@@ -105,7 +105,22 @@
     "noAccount": "Hisobingiz yo'qmi?",
     "haveAccount": "Ro'yxatdan o'tganmisiz?",
     "checkEmail": "Hisobni tasdiqlash uchun pochtangizni tekshiring.",
-    "invalid": "Email yoki parol noto'g'ri."
+    "invalid": "Email yoki parol noto'g'ri.",
+    "checkTitle": "Pochtangizni tekshiring",
+    "checkSent": "Tasdiqlash havolasini quyidagi manzilga yubordik:",
+    "checkStep1": "Xatni oching: «Confirm your email address»",
+    "checkStep2": "«Confirm email address» havolasini bosing",
+    "checkStep3": "Shaxsiy kabinetingiz avtomatik ochiladi",
+    "openMail": "{service}ni ochish",
+    "resend": "Xatni qayta yuborish",
+    "resendIn": "Qayta yuborish: {s} s",
+    "resent": "Xat qayta yuborildi.",
+    "resendError": "Yuborib bo'lmadi. Bir necha daqiqadan so'ng urinib ko'ring.",
+    "spamTip": "Xat kelmadimi? «Spam» va «Promotions» papkalarini tekshiring. Xat odatda 1–2 daqiqada keladi.",
+    "wrongEmail": "Boshqa email bilan ro'yxatdan o'tish",
+    "confirmed": "Email tasdiqlandi. Endi tizimga kiring.",
+    "unconfirmed": "Email hali tasdiqlanmagan. Pochtangizdagi havolani bosing.",
+    "linkExpired": "Havola eskirgan yoki allaqachon ishlatilgan. Qaytadan kiring yoki yangi xat so'rang."
   },
   "dashboard": {
     "title": "Shaxsiy kabinet",

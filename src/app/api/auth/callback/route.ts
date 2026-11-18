@@ -7,10 +7,17 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   let next = searchParams.get("next") ?? "/";
   if (!next.startsWith("/") || next.startsWith("//")) next = "/";
+  const locale = next.match(/^\/(uz|ru|en)(?=\/|$)/)?.[1] ?? "uz";
 
+  // Supabase sends errors back as ?error=...&error_code=otp_expired
+  if (searchParams.get("error_code") || searchParams.get("error")) {
+    return NextResponse.redirect(`${origin}/${locale}/login?link=expired`);
+  }
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    // Opened in another browser or device: the email is confirmed, but this browser has no session yet
+    if (error) return NextResponse.redirect(`${origin}/${locale}/login?confirmed=1`);
   }
   return NextResponse.redirect(`${origin}${next}`);
 }

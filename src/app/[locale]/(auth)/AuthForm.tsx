@@ -1,31 +1,48 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { IS_DEMO } from "@/lib/supabase/env";
 import type { AuthState } from "./actions";
+import CheckEmail from "./CheckEmail";
 
 type Props = {
   mode: "login" | "register";
   action: (state: AuthState, formData: FormData) => Promise<AuthState>;
   next?: string;
+  notice?: "confirmed" | "expired";
 };
 
-export default function AuthForm({ mode, action, next }: Props) {
+export default function AuthForm({ mode, action, next, notice }: Props) {
   const t = useTranslations("auth");
   const td = useTranslations("demo");
   const [state, formAction, pending] = useActionState(action, undefined);
+  const [dismissed, setDismissed] = useState<AuthState>(undefined); // "use a different email" goes back to the form
+  const [resendFor, setResendFor] = useState<string | null>(null);
 
   const errorText =
-    state?.error === "invalid" ? t("invalid") : state?.error;
+    state?.error === "invalid" ? t("invalid") : state?.error === "unconfirmed" ? t("unconfirmed") : state?.error;
+
+  // after signing up (or asking to resend from the login form): the "check your inbox" screen
+  const checkEmail = (state?.message === "checkEmail" && state !== dismissed && state.email) || resendFor;
+  if (checkEmail) {
+    return (
+      <div className="mx-auto max-w-md card p-8 sm:p-10">
+        <CheckEmail email={checkEmail} delay={resendFor ? 0 : 60} onBack={() => { setDismissed(state); setResendFor(null); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md card">
       <h1 className="mb-6 text-2xl">{mode === "login" ? t("loginTitle") : t("registerTitle")}</h1>
-      {state?.message === "checkEmail" ? (
-        <p className="rounded bg-green-50 p-3 text-brand-700">{t("checkEmail")}</p>
-      ) : (
+      {notice && !state && (
+        <p className={`mb-5 rounded-xl px-4 py-3 text-sm ${notice === "confirmed" ? "bg-accent/15 text-accent" : "bg-red-500/10 text-red-400"}`} role="status">
+          {notice === "confirmed" ? `✓ ${t("confirmed")}` : t("linkExpired")}
+        </p>
+      )}
+      {(
         <form action={formAction} className="space-y-4">
           {next && <input type="hidden" name="next" value={next} />}
           {mode === "register" && (
@@ -57,7 +74,14 @@ export default function AuthForm({ mode, action, next }: Props) {
             />
             {mode === "register" && <p className="mt-1 text-xs text-slate-500">{t("passwordHint")}</p>}
           </div>
-          {errorText && <p className="text-sm text-red-400">{errorText}</p>}
+          {errorText && (
+            <p className="text-sm text-red-400" role="alert">
+              {errorText}
+              {state?.error === "unconfirmed" && state.email && (
+                <button type="button" onClick={() => setResendFor(state.email!)} className="ml-1 font-semibold underline">{t("resend")}</button>
+              )}
+            </p>
+          )}
           <button className="btn-primary w-full" disabled={pending}>
             {mode === "login" ? t("loginTitle") : t("registerTitle")}
           </button>

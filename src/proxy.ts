@@ -9,6 +9,20 @@ const intl = createIntlMiddleware(routing);
 const PROTECTED = ["/dashboard", "/admin"];
 
 export async function proxy(request: NextRequest) {
+  // 0. A confirmation link that landed on a normal page (e.g. "/?code=…" when Supabase falls back
+  //    to its Site URL): hand it to the auth callback so the login still completes.
+  const { searchParams } = request.nextUrl;
+  if (!IS_DEMO && (searchParams.has("code") || searchParams.has("error_code"))) {
+    const [, first] = request.nextUrl.pathname.split("/");
+    const loc = (routing.locales as readonly string[]).includes(first) ? first : routing.defaultLocale;
+    const url = request.nextUrl.clone();
+    url.pathname = "/api/auth/callback";
+    url.search = "";
+    searchParams.forEach((v, k) => url.searchParams.set(k, v));
+    if (!url.searchParams.has("next")) url.searchParams.set("next", `/${loc}/dashboard`);
+    return NextResponse.redirect(url);
+  }
+
   // 1. Language routing (/uz, /ru, /en)
   const response = intl(request);
 

@@ -5,7 +5,13 @@ import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error?: string; message?: string } | undefined;
+export type AuthState = { error?: string; message?: string; email?: string } | undefined;
+
+/** Where the confirmation email link sends people: the callback finishes the login, then opens the dashboard. */
+async function confirmRedirect(locale: string) {
+  const origin = (await headers()).get("origin") ?? "";
+  return `${origin}/api/auth/callback?next=/${locale}/dashboard`;
+}
 
 function safeNext(next: FormDataEntryValue | null) {
   const v = typeof next === "string" ? next : "";
@@ -16,11 +22,12 @@ function safeNext(next: FormDataEntryValue | null) {
 
 export async function login(_: AuthState, formData: FormData): Promise<AuthState> {
   const supabase = await createClient();
+  const email = String(formData.get("email") ?? "").trim();
   const { error } = await supabase.auth.signInWithPassword({
-    email: String(formData.get("email") ?? ""),
+    email,
     password: String(formData.get("password") ?? ""),
   });
-  if (error) return { error: "invalid" };
+  if (error) return error.code === "email_not_confirmed" ? { error: "unconfirmed", email } : { error: "invalid" };
   const locale = await getLocale();
   redirect({ href: safeNext(formData.get("next")), locale });
 }
@@ -28,12 +35,12 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
 export async function register(_: AuthState, formData: FormData): Promise<AuthState> {
   const supabase = await createClient();
   const locale = await getLocale();
-  const origin = (await headers()).get("origin") ?? "";
+  const email = String(formData.get("email") ?? "").trim();
   const { data, error } = await supabase.auth.signUp({
-    email: String(formData.get("email") ?? ""),
+    email,
     password: String(formData.get("password") ?? ""),
     options: {
-      emailRedirectTo: `${origin}/api/auth/callback?next=/${locale}/dashboard`,
+      emailRedirectTo: await confirmRedirect(locale),
       data: {
         full_name: String(formData.get("full_name") ?? ""),
         affiliation: String(formData.get("affiliation") ?? ""),
@@ -44,7 +51,17 @@ export async function register(_: AuthState, formData: FormData): Promise<AuthSt
   if (error) return { error: error.message };
   // If email confirmation is off in Supabase, the user is signed in immediately.
   if (data.session) redirect({ href: "/dashboard", locale });
-  return { message: "checkEmail" };
+  return { message: "checkEmail", email };
+}
+
+/** Sends the sign-up confirmation email again. */
+export async function resendConfirmation(email: string): Promise<{ ok: boolean }> {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup", email, options: { emailRedirectTo: await confirmRedirect(await getLocale()) },
+  });
+  return { ok: !error };
 }
 
 export async function logout() {

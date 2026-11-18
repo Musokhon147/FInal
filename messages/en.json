@@ -105,7 +105,22 @@
     "noAccount": "No account yet?",
     "haveAccount": "Already registered?",
     "checkEmail": "Check your email to confirm your account.",
-    "invalid": "Wrong email or password."
+    "invalid": "Wrong email or password.",
+    "checkTitle": "Check your inbox",
+    "checkSent": "We sent a confirmation link to:",
+    "checkStep1": "Open the email \"Confirm your email address\"",
+    "checkStep2": "Click \"Confirm email address\"",
+    "checkStep3": "Your account opens automatically",
+    "openMail": "Open {service}",
+    "resend": "Resend the email",
+    "resendIn": "Resend in {s}s",
+    "resent": "Email sent again.",
+    "resendError": "Could not send. Try again in a few minutes.",
+    "spamTip": "No email? Check your Spam and Promotions folders. It usually arrives within 1–2 minutes.",
+    "wrongEmail": "Use a different email",
+    "confirmed": "Your email is confirmed. Please log in.",
+    "unconfirmed": "Your email is not confirmed yet. Click the link in the email we sent.",
+    "linkExpired": "The link has expired or was already used. Log in, or ask for a new email."
   },
   "dashboard": {
     "title": "My account",
