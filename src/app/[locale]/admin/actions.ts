@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendJournalEmail } from "@/lib/email";
 import { getSession, isStaff } from "@/lib/auth";
 import type { AppRole, SubmissionStatus } from "@/lib/types";
 import { cleanI18nHtml } from "@/lib/sanitize";
@@ -26,6 +28,8 @@ export async function setDecision(formData: FormData) {
     .update({ status, decision_note: str(formData, "note") || null, editor_id: user!.id })
     .eq("id", id);
   if (error) throw new Error(error.message);
+  const key = status === "accepted" ? "decision_accept" : status === "rejected" ? "decision_reject" : status === "revision_required" ? "revision_required" : null;
+  if (key) after(() => sendJournalEmail(key, { submissionId: id }));
   done();
 }
 
@@ -39,13 +43,14 @@ export async function assignReviewer(formData: FormData) {
     .order("round", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const { error } = await supabase.from("review_assignments").insert({
+  const { data: review, error } = await supabase.from("review_assignments").insert({
     submission_id,
     reviewer_id: str(formData, "reviewer_id"),
     round: int(formData, "round") ?? prev?.round ?? 1,
     due_at: str(formData, "due_at") || null,
-  });
+  }).select("id").single();
   if (error) throw new Error(error.message);
+  after(() => sendJournalEmail("review_invite", { submissionId: submission_id, reviewId: review.id }));
   // move to "under review" automatically
   await supabase
     .from("submissions")
@@ -108,6 +113,8 @@ export async function publishSubmission(input: {
     .single();
   if (error) throw new Error(error.message);
   await supabase.from("submissions").update({ status: "published" }).eq("id", s.id);
+  // the author hears about it once the article is live (scheduled ones: when their issue is published)
+  if (live) after(() => sendJournalEmail("article_published", { submissionId: s.id, articleId: article.id }));
   done();
   return article.id as string;
 }
@@ -148,8 +155,10 @@ export async function setIssuePublished(id: string, publish: boolean) {
     .eq("id", id);
   // articles follow their issue
   if (publish) {
-    await supabase.from("articles").update({ status: "published", published_at: now })
-      .eq("issue_id", id).eq("status", "scheduled");
+    const { data: going } = await supabase.from("articles").update({ status: "published", published_at: now })
+      .eq("issue_id", id).eq("status", "scheduled").select("id, submission_id");
+    const list = (going ?? []).filter((a) => a.submission_id) as { id: string; submission_id: string }[];
+    if (list.length) after(async () => { for (const a of list) await sendJournalEmail("article_published", { submissionId: a.submission_id, articleId: a.id }); });
   } else {
     await supabase.from("articles").update({ status: "scheduled" }).eq("issue_id", id);
   }
@@ -450,4 +459,19 @@ export async function saveAuthorKits(kits: Record<string, { guide: Record<string
   if (error) throw new Error(error.message);
   revalidatePath("/[locale]/for-authors", "page");
   done();
+}
+
+/** Sends one template, filled with sample details, to the signed-in editor — to check wording and delivery. */
+export async function sendTestEmail(key: string, lang: "uz" | "ru" | "en", subject: string, body: string) {
+  const { user } = await staff();
+  const { emailConfigured, deliver } = await import("@/lib/email");
+  const { fillTemplate, SAMPLE_VARS } = await import("@/lib/email-templates");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  if (!emailConfigured() || !user?.email) return { ok: false, reason: "not-configured" as const };
+  const s = `[TEST] ${fillTemplate(subject, SAMPLE_VARS)}`;
+  const r = await deliver(user.email, s, fillTemplate(body, SAMPLE_VARS), SAMPLE_VARS.journal);
+  await createAdminClient()?.from("email_log").insert({
+    key, to_email: user.email, subject: s, status: r.error ? "failed" : "sent", error: r.error ?? null, provider_id: r.id ?? null,
+  });
+  return r.error ? { ok: false, reason: "failed" as const, error: r.error } : { ok: true, to: user.email, lang };
 }

@@ -533,7 +533,19 @@
     "errFile": "Faylni o'qib bo'lmadi. CSV (UTF-8) ekanini tekshiring.",
     "skipExisting": "DOI bo'yicha mavjud maqolalarni o'tkazib yuborish",
     "skipped": "o'tkazib yuborildi",
-    "errVolumeYear": "{n}-jild allaqachon {year}-yil uchun mavjud"
+    "errVolumeYear": "{n}-jild allaqachon {year}-yil uchun mavjud",
+    "sendingOn": "Xat yuborish ulangan.",
+    "sendingOff": "Xat yuborish hali ulanmagan: serverda RESEND_API_KEY, EMAIL_FROM va SUPABASE_SERVICE_ROLE_KEY sozlanishi kerak. Ungacha xatlar yuborilmaydi.",
+    "recentEmails": "Oxirgi yuborilgan xatlar",
+    "noEmails": "Hali xat yuborilmagan.",
+    "st_sent": "Yuborildi",
+    "st_failed": "Xato",
+    "st_skipped": "O'tkazildi",
+    "to": "Kimga",
+    "sendTest": "Menga sinov xatini yuborish",
+    "testSent": "Sinov xati yuborildi: {to}",
+    "testFailed": "Yuborilmadi: {error}",
+    "testOff": "Xat yuborish hali ulanmagan."
   },
   "pt": {
     "journal": "Ilmiy jurnal",

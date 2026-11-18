@@ -1,5 +1,6 @@
 "use client";
 
+import { notifySubmitted } from "../../actions";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -36,6 +37,7 @@ export default function RevisionUpload({ submissionId, nextVersion }: { submissi
       if (ins.error) throw ins.error;
       const upd = await supabase.from("submissions").update({ status: "submitted" }).eq("id", submissionId);
       if (upd.error) throw upd.error;
+      notifySubmitted(submissionId).catch(() => {});
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.error"));

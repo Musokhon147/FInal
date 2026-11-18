@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { fillTemplate, type L3 } from "@/lib/email-templates";
-import { resetEmailTemplate, saveEmailTemplate } from "../../actions";
+import { resetEmailTemplate, saveEmailTemplate, sendTestEmail } from "../../actions";
 
 const LANGS = [["uz", "O'zbek"], ["ru", "Русский"], ["en", "English"]] as const;
 type Lang = (typeof LANGS)[number][0];
@@ -20,6 +20,7 @@ export default function EmailEditor({ emailKey, initial, defaults, vars, sample,
   const [body, setBody] = useState<L3>(initial.body);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [pending, start] = useTransition();
+  const [test, setTest] = useState<string | null>(null);
   const focused = useRef<"subject" | "body">("body");
   const subjRef = useRef<HTMLInputElement>(null), bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,6 +81,16 @@ export default function EmailEditor({ emailKey, initial, defaults, vars, sample,
 
       <section className="card p-0" aria-label={t("preview")}>
         <div className="border-b border-slate-200 px-6 py-4">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <button type="button" className="btn-secondary text-sm" disabled={pending}
+              onClick={() => start(async () => {
+                const r = await sendTestEmail(emailKey, lang, subject[lang], body[lang]);
+                setTest(r.ok ? t("testSent", { to: r.to ?? "" }) : r.reason === "not-configured" ? t("testOff") : t("testFailed", { error: r.error ?? "" }));
+              })}>
+              {t("sendTest")}
+            </button>
+            {test && <span className="text-xs text-slate-600" role="status">{test}</span>}
+          </div>
           <p className="text-xs text-slate-500">{t("preview")} · {t("previewHint")}</p>
           <p className="mt-2 font-semibold text-slate-900">{fillTemplate(subject[lang], sample)}</p>
         </div>

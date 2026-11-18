@@ -533,7 +533,19 @@
     "errFile": "The file could not be read. Check that it is a CSV (UTF-8) file.",
     "skipExisting": "Skip articles whose DOI already exists",
     "skipped": "skipped",
-    "errVolumeYear": "Volume {n} already exists for {year}"
+    "errVolumeYear": "Volume {n} already exists for {year}",
+    "sendingOn": "Email sending is connected.",
+    "sendingOff": "Email sending is not connected yet: the server needs RESEND_API_KEY, EMAIL_FROM and SUPABASE_SERVICE_ROLE_KEY. Until then no emails are sent.",
+    "recentEmails": "Recent emails",
+    "noEmails": "No emails sent yet.",
+    "st_sent": "Sent",
+    "st_failed": "Failed",
+    "st_skipped": "Skipped",
+    "to": "To",
+    "sendTest": "Send me a test email",
+    "testSent": "Test email sent to {to}",
+    "testFailed": "Not sent: {error}",
+    "testOff": "Email sending is not connected yet."
   },
   "pt": {
     "journal": "Scientific journal",

@@ -1,6 +1,7 @@
 "use client";
 
 import { celebrate } from "@/lib/celebrate";
+import { notifySubmitted } from "../actions";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -143,6 +144,7 @@ export default function SubmitForm({ journalId, userId, sections, me, conference
       // 4. Send it to the editors
       const { error: e5 } = await supabase.from("submissions").update({ status: "submitted" }).eq("id", sub.id);
       if (e5) throw e5;
+      notifySubmitted(sub.id).catch(() => {}); // receipt email; never blocks the author
 
       celebrate();
       router.push(`/dashboard/submissions/${sub.id}`);

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendJournalEmail } from "@/lib/email";
 import { createClient } from "@/lib/supabase/server";
 import { SCORE_KEYS, type ReviewRec } from "@/lib/types";
 
@@ -48,4 +50,14 @@ export async function submitReview(_: ReviewState, formData: FormData): Promise<
   if (error) return { error: error.message };
   revalidatePath("/[locale]/dashboard", "layout");
   return { ok: true };
+}
+
+/** After an author submits (or resubmits) a manuscript: the "we received it" email. Checks it really is theirs and submitted. */
+export async function notifySubmitted(submissionId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data: s } = await supabase.from("submissions").select("submitter_id, status").eq("id", submissionId).maybeSingle();
+  if (!s || s.submitter_id !== user.id || s.status !== "submitted") return;
+  after(() => sendJournalEmail("submission_received", { submissionId }));
 }
