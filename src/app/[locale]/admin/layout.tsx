@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { Link, redirect } from "@/i18n/navigation";
+import { redirect } from "@/i18n/navigation";
+import AdminNav from "./AdminNav";
 import { initLocale } from "@/lib/locale";
 import { getSession, isStaff } from "@/lib/auth";
 
@@ -11,33 +12,39 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
   if (!user) redirect({ href: "/login?next=/admin", locale });
   if (!isStaff(profile)) redirect({ href: "/dashboard", locale });
 
-  const items = [
-    ["/admin", t("dashboard")],
-    ["/admin/stats", tn("adm.stats")],
-    ["/admin/submissions", t("submissions")],
-    ["/admin/issues", t("issues")],
-    ["/admin/articles", t("articles")],
-    ["/admin/pages", t("pages")],
-    ["/admin/board", tn("nav.board")],
-    ["/admin/news", tn("x.news")],
-    ["/admin/conferences", tn("x.conferences")],
-    ["/admin/for-authors", tn("pt.forAuthorsAdmin")],
-    ["/admin/emails", tn("adm.emails")],
-    ["/admin/log", tn("adm.log")],
-    ["/admin/import", tn("adm.import")],
-    ...(profile?.role === "admin" ? [["/admin/users", t("users")], ["/admin/settings", tn("x.settings")]] : []),
+  // items waiting for the editor (new + accepted), shown on "To do"
+  const { supabase } = await getSession();
+  const { count: waiting } = await supabase.from("submissions").select("id", { count: "exact", head: true }).in("status", ["submitted", "desk_review", "accepted"]);
+  const admin = profile?.role === "admin";
+  const groups = [
+    { title: tn("pt.gWork"), items: [
+      { href: "/admin", label: tn("pt.todoTitle"), badge: waiting ?? 0 },
+      { href: "/admin/submissions", label: t("submissions") },
+      { href: "/admin/issues", label: t("issues") },
+      { href: "/admin/articles", label: t("articles") },
+    ] },
+    { title: tn("pt.gSite"), items: [
+      { href: "/admin/news", label: tn("x.news") },
+      { href: "/admin/pages", label: tn("pt.pagesMenu") },
+      { href: "/admin/board", label: tn("nav.board") },
+      { href: "/admin/conferences", label: tn("x.conferences") },
+      { href: "/admin/for-authors", label: tn("pt.forAuthorsAdmin") },
+    ] },
+    { title: tn("pt.gSettings"), items: [
+      ...(admin ? [{ href: "/admin/settings", label: tn("x.settings") }, { href: "/admin/users", label: t("users") }] : []),
+      { href: "/admin/emails", label: tn("adm.emails") },
+    ] },
+    { title: tn("pt.gTools"), folded: true, items: [
+      { href: "/admin/stats", label: tn("adm.stats") },
+      { href: "/admin/log", label: tn("adm.log") },
+      { href: "/admin/import", label: tn("adm.import") },
+    ] },
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+    <div className="grid gap-6 md:grid-cols-[230px_1fr]">
       <aside>
-        <nav className="card sticky top-4 space-y-1 p-3">
-          {items.map(([href, label]) => (
-            <Link key={href} href={href} className="block rounded px-3 py-2 text-sm hover:bg-brand-50 hover:text-brand-700">
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <AdminNav groups={groups} />
       </aside>
       <div className="min-w-0">{children}</div>
     </div>

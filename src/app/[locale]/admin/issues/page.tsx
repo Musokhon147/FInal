@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { getJournal } from "@/lib/data";
 import { formatDate, tr, type I18nText } from "@/lib/i18n-field";
 import I18nFields from "@/components/admin/I18nFields";
-import { createIssue, createVolume } from "../actions";
+import { createIssue, createVolume, startNewIssue } from "../actions";
 import IssueToggle from "./IssueToggle";
 
 type Vol = {
@@ -46,7 +46,19 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <form action={startNewIssue} className="card flex flex-wrap items-center justify-between gap-4 border-brand-600/50">
+        <div>
+          <h2 className="text-lg">{t("pt.startIssue")}</h2>
+          <p className="text-sm text-slate-500">{t("pt.startIssueHint", { year: new Date().getFullYear() })}</p>
+        </div>
+        <button className="btn-primary px-6 py-3">+ {t("pt.startIssue")}</button>
+      </form>
+
+      <details className="group">
+        <summary className="cursor-pointer list-none text-sm text-slate-500 hover:text-slate-900">
+          <span className="inline-block transition group-open:rotate-90">›</span> {t("pt.advancedIssues")}
+        </summary>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <form action={createVolume} className="card space-y-3">
           <h2 className="text-lg">{t("admin.newVolume")}</h2>
           <input type="hidden" name="journal_id" value={journal?.id ?? ""} />
@@ -83,10 +95,11 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
           </form>
         )}
       </div>
+      </details>
 
       {volumes.map((v) => (
         <div key={v.id} className="card">
-          <h2 className="mb-3 text-xl">{t("archives.volume", { n: v.number, year: v.year })}</h2>
+          <h2 className="mb-3 flex items-baseline gap-3 text-xl">{v.year} <span className="text-sm font-normal text-slate-500">{t("archives.volume", { n: v.number, year: v.year })}</span></h2>
           {v.issues.length === 0 && (
             <form action={createIssue} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 p-4">
               <p className="text-sm text-slate-600">{t("pt.noIssuesInVolume")}</p>
@@ -111,7 +124,7 @@ export default async function AdminIssues({ params }: PageProps<"/[locale]/admin
                   </td>
                   <td>
                     <span className={i.status === "published" ? "text-brand-700" : "text-slate-500"}>
-                      {i.status === "published" ? t("admin.isPublished") : "Draft"}
+                      {i.status === "published" ? t("admin.isPublished") : t("pt.draftLabel")}
                     </span>
                     {i.published_at && <span className="block text-xs text-slate-400">{formatDate(i.published_at, locale)}</span>}
                   </td>

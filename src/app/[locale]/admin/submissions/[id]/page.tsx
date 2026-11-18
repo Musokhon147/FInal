@@ -14,6 +14,8 @@ import type { Profile, ReviewAssignment, Submission, SubmissionAuthor, Submissio
 import { assignReviewer, setDecision, setSimilarity } from "../../actions";
 import { SCORE_KEYS } from "@/lib/types";
 import PublishForm from "./PublishForm";
+import DecisionPanel from "./DecisionPanel";
+import Steps from "./Steps";
 import CancelReviewButton from "./CancelReviewButton";
 
 const DECISIONS = ["desk_review", "under_review", "revision_required", "accepted", "rejected"] as const;
@@ -57,6 +59,7 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
   return (
     <div className="space-y-6">
       <Link href="/admin/submissions" className="text-sm text-brand-600 hover:underline">← {t("common.back")}</Link>
+      <Steps status={s.status} reviewing={reviewList.some((r) => ["invited", "accepted"].includes(r.status))} />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <div className="space-y-6">
@@ -160,6 +163,33 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
         </div>
 
         <aside className="space-y-6">
+          <DecisionPanel
+            submissionId={s.id}
+            status={s.status}
+            note={s.decision_note}
+            articleId={(article as { id: string } | null)?.id ?? null}
+            manualStatus={
+              <form action={setDecision} className="space-y-2">
+                <input type="hidden" name="id" value={s.id} />
+                <select name="status" className="input" defaultValue={s.status}>
+                  {DECISIONS.map((d) => <option key={d} value={d}>{t(`status.${d}`)}</option>)}
+                </select>
+                <textarea name="note" className="input min-h-20" placeholder={t("admin.note")} defaultValue={s.decision_note ?? ""} />
+                <button className="btn-secondary w-full">{t("admin.apply")}</button>
+              </form>
+            }
+            advancedPublish={
+              s.status === "accepted" && !article ? (
+                <PublishForm
+                  submissionId={s.id}
+                  issues={issuesFor(s.pub_type ?? "journal", s.conference_id ?? null, (issues ?? []) as unknown as IssueChoice[]).map((i) => ({
+                    id: i.id,
+                    label: `${issueLabel(t, i)}${i.conferences ? ` · ${tr(i.conferences.title, locale)}` : ""}${i.status === "draft" ? " (draft)" : ""}`,
+                  }))}
+                />
+              ) : null
+            }
+          />
           <form action={setSimilarity} className="card space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg">{t("x.similarity")}</h2>
@@ -177,30 +207,6 @@ export default async function AdminSubmission({ params }: PageProps<"/[locale]/a
             <button className="btn-secondary w-full">{t("common.save")}</button>
           </form>
 
-          {!["published", "withdrawn"].includes(s.status) && (
-            <form action={setDecision} className="card space-y-3">
-              <h2 className="text-lg">{t("admin.changeStatus")}</h2>
-              <input type="hidden" name="id" value={s.id} />
-              <select name="status" className="input" defaultValue={s.status}>
-                {DECISIONS.map((d) => <option key={d} value={d}>{t(`status.${d}`)}</option>)}
-              </select>
-              <textarea name="note" className="input min-h-24" placeholder={t("admin.note")} defaultValue={s.decision_note ?? ""} />
-              <button className="btn-primary w-full">{t("admin.apply")}</button>
-            </form>
-          )}
-
-          {s.status === "accepted" && !article && (
-            <PublishForm
-              submissionId={s.id}
-              issues={issuesFor(s.pub_type ?? "journal", s.conference_id ?? null, (issues ?? []) as unknown as IssueChoice[]).map((i) => ({
-                id: i.id,
-                label: `${issueLabel(t, i)}${i.conferences ? ` · ${tr(i.conferences.title, locale)}` : ""}${i.status === "draft" ? " (draft)" : ""}`,
-              }))}
-            />
-          )}
-          {article && (
-            <Link href={`/admin/articles/${article.id}`} className="btn-secondary w-full">{t("admin.articles")} →</Link>
-          )}
 
           <div className="card">
             <h2 className="mb-4 text-lg">{t("submission.timeline")}</h2>

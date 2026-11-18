@@ -475,3 +475,113 @@ export async function sendTestEmail(key: string, lang: "uz" | "ru" | "en", subje
   });
   return r.error ? { ok: false, reason: "failed" as const, error: r.error } : { ok: true, to: user.email, lang };
 }
+
+/* ---------- simple publishing: one button ---------- */
+
+type Db = Awaited<ReturnType<typeof staff>>["supabase"];
+type SubRow = { id: string; journal_id: string; pub_type: string | null; conference_id: string | null; status: string; title: string };
+
+/** This year's volume, created when missing (volumes are just "one per year" in the simple flow). */
+async function volumeForYear(db: Db, journalId: string, year: number) {
+  const { data: vols } = await db.from("volumes").select("id, number, year").eq("journal_id", journalId).order("number", { ascending: false });
+  const list = (vols ?? []) as { id: string; number: number; year: number }[];
+  const found = list.find((v) => v.year === year);
+  if (found) return found.id;
+  const { data, error } = await db.from("volumes").insert({ journal_id: journalId, number: (list[0]?.number ?? 0) + 1, year }).select("id").single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+/** Next free issue number in a volume (regular and special issues are numbered separately). */
+async function nextIssueNumber(db: Db, volumeId: string, special: boolean) {
+  const { data } = await db.from("issues").select("number").eq("volume_id", volumeId).eq("is_special", special).order("number", { ascending: false }).limit(1);
+  return ((data?.[0] as { number: number } | undefined)?.number ?? 0) + 1;
+}
+
+/**
+ * The issue new work goes into: the newest issue of the right kind (journal issue, or the collection
+ * of the submission's conference). Creates one for this year when there is none.
+ */
+async function currentIssueFor(db: Db, s: SubRow): Promise<string | "needs-conference"> {
+  const thesis = s.pub_type === "local_conference" || s.pub_type === "international_conference";
+  if (!thesis) {
+    const { data } = await db.from("issues").select("id").is("conference_id", null).order("created_at", { ascending: false }).limit(1);
+    if (data?.[0]) return (data[0] as { id: string }).id;
+    const vol = await volumeForYear(db, s.journal_id, new Date().getFullYear());
+    const { data: created, error } = await db.from("issues").insert({ volume_id: vol, number: await nextIssueNumber(db, vol, false) }).select("id").single();
+    if (error) throw new Error(error.message);
+    return created.id as string;
+  }
+  if (s.conference_id) {
+    const { data } = await db.from("issues").select("id").eq("conference_id", s.conference_id).order("created_at", { ascending: false }).limit(1);
+    if (data?.[0]) return (data[0] as { id: string }).id;
+    const { data: conf } = await db.from("conferences").select("title, start_date").eq("id", s.conference_id).single();
+    const year = conf?.start_date ? Number(String(conf.start_date).slice(0, 4)) : new Date().getFullYear();
+    const vol = await volumeForYear(db, s.journal_id, year);
+    const { data: created, error } = await db.from("issues")
+      .insert({ volume_id: vol, number: await nextIssueNumber(db, vol, true), is_special: true, conference_id: s.conference_id, title: conf?.title ?? {} })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    return created.id as string;
+  }
+  // a thesis without a conference: the newest collection of the same kind
+  const scope = s.pub_type === "international_conference" ? "international" : "local";
+  const { data } = await db.from("issues").select("id, conferences!inner(scope)").eq("conferences.scope", scope).order("created_at", { ascending: false }).limit(1);
+  return data?.[0] ? (data[0] as { id: string }).id : "needs-conference";
+}
+
+/** The author's latest PDF, copied to the public article files (used when no final PDF is attached). */
+async function authorPdf(db: Db, submissionId: string): Promise<string | null> {
+  const { data: files } = await db.from("submission_files").select("storage_path, file_name, mime_type, kind, version, created_at")
+    .eq("submission_id", submissionId).in("kind", ["final_pdf", "revision", "manuscript"]).order("created_at", { ascending: false });
+  const pdf = ((files ?? []) as { storage_path: string; file_name: string; mime_type: string | null }[])
+    .find((f) => f.mime_type === "application/pdf" || /\.pdf$/i.test(f.file_name));
+  if (!pdf) return null;
+  const { IS_DEMO } = await import("@/lib/supabase/env");
+  if (IS_DEMO) return pdf.storage_path; // the demo serves sample PDFs for any path
+  const { data: blob, error } = await db.storage.from("manuscripts").download(pdf.storage_path);
+  if (error || !blob) return null;
+  const path = `${submissionId}/${Date.now()}-${pdf.file_name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
+  const { error: up } = await db.storage.from("articles").upload(path, blob, { contentType: "application/pdf" });
+  return up ? null : path;
+}
+
+/**
+ * "Accept and publish" / "Publish now": accepts the manuscript if needed, puts it in the current issue
+ * (making one if there is none), makes that issue live and publishes the article. The author gets one
+ * email: "your article is published".
+ */
+export async function quickPublish(submissionId: string, opts: { pdfPath?: string | null; fullText?: string | null } = {}) {
+  const { supabase, user } = await staff();
+  const { data: s, error } = await supabase.from("submissions").select("id, journal_id, pub_type, conference_id, status, title").eq("id", submissionId).single();
+  if (error || !s) return { error: "not-found" as const };
+  const sub = s as SubRow;
+  if (["published", "withdrawn"].includes(sub.status)) return { error: "already" as const };
+  const { data: existing } = await supabase.from("articles").select("id").eq("submission_id", sub.id).maybeSingle();
+  if (existing) return { articleId: (existing as { id: string }).id };
+
+  const issueId = await currentIssueFor(supabase, sub);
+  if (issueId === "needs-conference") return { error: "needs-conference" as const };
+  if (sub.status !== "accepted") {
+    const { error: e } = await supabase.from("submissions").update({ status: "accepted", editor_id: user!.id }).eq("id", sub.id);
+    if (e) throw new Error(e.message);
+  }
+  const pdfPath = opts.pdfPath ?? (await authorPdf(supabase, sub.id));
+
+  // the issue goes live first, so the article is published (not scheduled) and the author is emailed once
+  const { data: issue } = await supabase.from("issues").select("status").eq("id", issueId).single();
+  if (issue?.status !== "published") await setIssuePublished(issueId, true);
+  const articleId = await publishSubmission({ submissionId: sub.id, issueId, firstPage: null, lastPage: null, doi: null, pdfPath, fullText: opts.fullText ?? null });
+  return { articleId, issueId };
+}
+
+/** "Start a new issue": next number in this year's volume, one click. */
+export async function startNewIssue() {
+  const { supabase } = await staff();
+  const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
+  if (!j) throw new Error("No journal");
+  const vol = await volumeForYear(supabase, j.id as string, new Date().getFullYear());
+  const { error } = await supabase.from("issues").insert({ volume_id: vol, number: await nextIssueNumber(supabase, vol, false) });
+  if (error) throw new Error(error.message);
+  done();
+}

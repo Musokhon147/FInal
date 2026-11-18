@@ -110,3 +110,8 @@ export function daysUntil(date: string | null | undefined) {
   const d = Math.ceil((Date.parse(date + "T23:59:59") - Date.now()) / 864e5);
   return d >= 0 ? d : null;
 }
+
+/** True once a due date has passed (used for reviews). */
+export function isOverdue(due: string) {
+  return Date.parse(due) < Date.now();
+}
