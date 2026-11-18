@@ -26,18 +26,30 @@ function toHtml(text: string, journal: string) {
 </table></td></tr></table></body></html>`;
 }
 
-export async function deliver(to: string, subject: string, text: string, journal: string): Promise<{ id?: string; error?: string }> {
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, text, html: toHtml(text, journal) }),
-    });
-    const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-    return res.ok ? { id: json.id } : { error: json.message || `HTTP ${res.status}` };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e) };
+/**
+ * Sends through the Resend API. One idempotency key per message, reused on retries, so a retry can never
+ * create a second email. Retries only network errors, 5xx and 429 (as Resend recommends).
+ */
+export async function deliver(to: string, subject: string, text: string, journal: string, idempotencyKey?: string): Promise<{ id?: string; error?: string }> {
+  const key = idempotencyKey ?? `msg/${crypto.randomUUID()}`;
+  let last = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 600 * 2 ** attempt));
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": key.slice(0, 256) },
+        body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, text, html: toHtml(text, journal) }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
+      if (res.ok) return { id: json.id };
+      last = json.message || `HTTP ${res.status}`;
+      if (res.status !== 429 && res.status < 500) return { error: last }; // bad request, wrong key, unverified domain: retrying won't help
+    } catch (e) {
+      last = e instanceof Error ? e.message : String(e); // network error: retry
+    }
   }
+  return { error: last };
 }
 
 const langOf = (l?: string | null): Lang => (l === "ru" || l === "en" ? l : "uz");
@@ -102,7 +114,7 @@ export async function sendJournalEmail(key: EmailKey, ctx: Ctx): Promise<"sent" 
     const tpl = resolveEmail(key, lang, saved as { subject?: Record<string, string>; body?: Record<string, string> } | null);
     const subject = fillTemplate(tpl.subject, vars);
     const text = fillTemplate(tpl.body, vars).replace(/\n{3,}/g, "\n\n"); // an empty note leaves a gap
-    const r = await deliver(to, subject, text, journalName);
+    const r = await deliver(to, subject, text, journalName, `journal/${key}/${s.id}/${ctx.reviewId ?? ctx.articleId ?? "-"}/${crypto.randomUUID()}`);
     await db.from("email_log").insert({
       key, to_email: to, subject, submission_id: s.id, review_id: ctx.reviewId ?? null,
       status: r.error ? "failed" : "sent", error: r.error ?? null, provider_id: r.id ?? null,
