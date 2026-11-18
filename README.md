@@ -62,6 +62,7 @@ A yellow banner shows the site is in demo mode. Changes are kept in memory and r
    - `supabase/migrations/20261114040000_admin_tools.sql` (change log, editable email templates)
    - `supabase/migrations/20261118000000_publication_types.sql` (journal / local / international conference types, issue PDFs, board degrees, "For authors" samples)
    - `supabase/migrations/20261118010000_harden_functions.sql` (security hardening)
+   - `supabase/migrations/20261118020000_pending_roles.sql` (give a role to an email before that person registers)
 3. **Environment variables**: in Vercel → Project → Settings → Environment Variables (or `.env.local` locally) set
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Supabase → Project Settings → API,
    then redeploy. The demo banner disappears and the site uses the real database.
