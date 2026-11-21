@@ -13,6 +13,7 @@ import Countdown from "@/components/fx/Countdown";
 import NewsCard from "@/components/design/NewsCard";
 import FoldTitle from "@/components/design/FoldTitle";
 import HeroTiles from "@/components/design/HeroTiles";
+import { isIssn } from "@/lib/identifiers";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
@@ -63,7 +64,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           <dl className="reveal mt-14 flex flex-wrap gap-x-10 gap-y-4 text-sm" style={{ animationDelay: ".9s" }}>
             <div><dt className="text-slate-500">{t("x.langsLabel")}</dt><dd className="mt-1 text-slate-900">O&apos;zbek, Русский, English</dd></div>
             <div><dt className="text-slate-500">{t("x.published")}</dt><dd className="mt-1 text-slate-900">{numbers.articles}</dd></div>
-            {journal?.issn_online && <div><dt className="text-slate-500">ISSN</dt><dd className="mt-1 text-slate-900">{journal.issn_online}</dd></div>}
+            {(isIssn(journal?.issn_online) || isIssn(journal?.issn_print)) && <div><dt className="text-slate-500">ISSN</dt><dd className="mt-1 text-slate-900">{[journal?.issn_online, journal?.issn_print].filter(isIssn).join(" · ")}</dd></div>}
           </dl>
         </div>
       </section>

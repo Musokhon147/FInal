@@ -9,6 +9,7 @@ import I18nFields from "@/components/admin/I18nFields";
 import type { Article } from "@/lib/types";
 import { updateArticle } from "../../actions";
 import PdfReplace from "./PdfReplace";
+import { DOI_PATTERN, isDoi } from "@/lib/identifiers";
 
 export default async function EditArticle({ params }: PageProps<"/[locale]/admin/articles/[id]">) {
   await initLocale(params);
@@ -54,7 +55,15 @@ export default async function EditArticle({ params }: PageProps<"/[locale]/admin
           <label><span className="label">{t("admin.lastPage")}</span><input name="last_page" type="number" defaultValue={a.last_page ?? ""} className="input" /></label>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label><span className="label">DOI</span><input name="doi" defaultValue={a.doi ?? ""} className="input" /></label>
+          <label><span className="label">DOI</span>
+            <input name="doi" defaultValue={a.doi ?? ""} className="input" placeholder="10.xxxxx/xxxx" pattern={DOI_PATTERN} title={t("ix.badDoi")} aria-describedby="doi-hint" />
+            <span id="doi-hint" className="mt-1 block text-xs text-slate-500">
+              {a.doi && !isDoi(a.doi) ? <span className="text-red-400">{t("ix.badDoi")}</span>
+                : a.doi_status === "registered" ? <span className="text-accent">✓ {t("ix.st_registered")}</span>
+                : a.doi_status === "failed" ? <span className="text-red-400">{t("ix.st_failed")}: {a.doi_message}</span>
+                : a.doi_status === "queued" ? t("ix.st_queued") : t("ix.doiInputHint")}
+            </span>
+          </label>
           <label><span className="label">Sort order</span><input name="sort_order" type="number" defaultValue={a.sort_order} className="input" /></label>
         </div>
         <label className="block"><span className="label">{t("article.references")}</span>

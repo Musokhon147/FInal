@@ -6,6 +6,9 @@ import { sendJournalEmail } from "@/lib/email";
 import { getSession, isStaff } from "@/lib/auth";
 import type { AppRole, SubmissionStatus } from "@/lib/types";
 import { cleanI18nHtml } from "@/lib/sanitize";
+import { isDoi, isDoiPrefix, isIssn, normalizeDoi, normalizeIssn } from "@/lib/identifiers";
+import { afterPublish, crossrefConfigured, registerDois } from "@/lib/crossref";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 async function staff() {
   const s = await getSession();
@@ -16,6 +19,17 @@ const done = () => revalidatePath("/[locale]", "layout");
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const int = (f: FormData, k: string) => (str(f, k) ? Number.parseInt(str(f, k), 10) : null);
 const i18n = (f: FormData, k: string) => ({ uz: str(f, `${k}_uz`), ru: str(f, `${k}_ru`), en: str(f, `${k}_en`) });
+/** A DOI typed by an editor: "" → null, a doi.org link → the bare DOI, anything else that is not a DOI → error. */
+function doiField(v: string | null | undefined) {
+  const d = normalizeDoi(v);
+  if (!d) return null;
+  if (!isDoi(d)) throw new Error("bad-doi");
+  return d;
+}
+/** DOIs and Crossref run after the response, with the service key when there is one (works without a session). */
+function doiAfterPublish(fallback: Awaited<ReturnType<typeof staff>>["supabase"], ids: string[], userId?: string | null) {
+  if (ids.length) after(() => afterPublish(createAdminClient() ?? fallback, ids, userId).catch(() => {}));
+}
 
 /* ---------- submissions ---------- */
 
@@ -75,7 +89,8 @@ export async function publishSubmission(input: {
   pdfPath: string | null;
   fullText?: string | null;
 }) {
-  const { supabase } = await staff();
+  const { supabase, user } = await staff();
+  const doi = doiField(input.doi);
   const { data: s, error: e1 } = await supabase.from("submissions").select("*").eq("id", input.submissionId).single();
   if (e1) throw new Error(e1.message);
   const [{ data: authors }, { data: issue }] = await Promise.all([
@@ -103,7 +118,7 @@ export async function publishSubmission(input: {
       })),
       first_page: input.firstPage,
       last_page: input.lastPage,
-      doi: input.doi || null,
+      doi,
       pdf_path: input.pdfPath,
       full_text: input.fullText?.slice(0, 200_000) || null,
       status: live ? "published" : "scheduled",
@@ -114,7 +129,10 @@ export async function publishSubmission(input: {
   if (error) throw new Error(error.message);
   await supabase.from("submissions").update({ status: "published" }).eq("id", s.id);
   // the author hears about it once the article is live (scheduled ones: when their issue is published)
-  if (live) after(() => sendJournalEmail("article_published", { submissionId: s.id, articleId: article.id }));
+  if (live) {
+    doiAfterPublish(supabase, [article.id], user?.id);
+    after(() => sendJournalEmail("article_published", { submissionId: s.id, articleId: article.id }));
+  }
   done();
   return article.id as string;
 }
@@ -146,7 +164,7 @@ export async function createIssue(formData: FormData) {
 }
 
 export async function setIssuePublished(id: string, publish: boolean) {
-  const { supabase } = await staff();
+  const { supabase, user } = await staff();
   const now = new Date().toISOString();
   const { data: issue } = await supabase.from("issues").select("published_at").eq("id", id).single();
   await supabase
@@ -157,6 +175,7 @@ export async function setIssuePublished(id: string, publish: boolean) {
   if (publish) {
     const { data: going } = await supabase.from("articles").update({ status: "published", published_at: now })
       .eq("issue_id", id).eq("status", "scheduled").select("id, submission_id");
+    doiAfterPublish(supabase, (going ?? []).map((a) => a.id as string), user?.id);
     const list = (going ?? []).filter((a) => a.submission_id) as { id: string; submission_id: string }[];
     if (list.length) after(async () => { for (const a of list) await sendJournalEmail("article_published", { submissionId: a.submission_id, articleId: a.id }); });
   } else {
@@ -168,11 +187,15 @@ export async function setIssuePublished(id: string, publish: boolean) {
 /* ---------- articles ---------- */
 
 export async function updateArticle(formData: FormData) {
-  const { supabase } = await staff();
+  const { supabase, user } = await staff();
   const id = str(formData, "id");
+  const doi = doiField(str(formData, "doi"));
+  const { data: before } = await supabase.from("articles").select("doi, doi_status, status").eq("id", id).maybeSingle();
+  const doiChanged = (before?.doi ?? null) !== doi;
   const { error } = await supabase
     .from("articles")
     .update({
+      ...(doiChanged ? { doi_status: "none", doi_message: null } : {}),
       title: str(formData, "title"),
       title_i18n: i18n(formData, "title"),
       abstract: str(formData, "abstract"),
@@ -181,13 +204,17 @@ export async function updateArticle(formData: FormData) {
       references: str(formData, "references"),
       first_page: int(formData, "first_page"),
       last_page: int(formData, "last_page"),
-      doi: str(formData, "doi") || null,
+      doi,
       issue_id: str(formData, "issue_id") || null,
       sort_order: int(formData, "sort_order") ?? 0,
       authors: JSON.parse(str(formData, "authors") || "[]"),
     })
     .eq("id", id);
   if (error) throw new Error(error.message);
+  // a registered DOI keeps Crossref's copy of the details up to date (updates are free)
+  if (crossrefConfigured() && doi && before?.status === "published" && (doiChanged || before.doi_status === "registered")) {
+    after(() => registerDois(createAdminClient() ?? supabase, [id], user?.id).catch(() => {}));
+  }
   done();
 }
 
@@ -235,17 +262,27 @@ export async function savePage(formData: FormData) {
 
 /* ---------- journal settings (admin) */
 export async function saveSettings(input: {
-  title: Record<string, string>; description: Record<string, string>; issn_online: string; publisher: string;
+  title: Record<string, string>; description: Record<string, string>; issn_online: string; issn_print?: string; publisher: string;
   contact_email: string; indexes: string[]; cfp_deadline: string | null; cfp_text: Record<string, string>; logo_url?: string | null;
-}) {
+  doi_prefix?: string; doi_auto?: boolean;
+}): Promise<{ error?: "bad-issn-online" | "bad-issn-print" | "bad-prefix" }> {
   const { supabase, profile } = await staff();
   if (profile?.role !== "admin") throw new Error("Forbidden");
+  // numbers are checked here, so a typo never reaches Google Scholar or Crossref
+  const issnOnline = normalizeIssn(input.issn_online), issnPrint = normalizeIssn(input.issn_print);
+  if (issnOnline && !isIssn(issnOnline)) return { error: "bad-issn-online" };
+  if (issnPrint && !isIssn(issnPrint)) return { error: "bad-issn-print" };
+  const prefix = String(input.doi_prefix ?? "").trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").replace(/\/$/, "");
+  if (prefix && !isDoiPrefix(prefix)) return { error: "bad-prefix" };
   const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
-  const row: Record<string, unknown> = { ...input };
+  const row: Record<string, unknown> = {
+    ...input, issn_online: issnOnline || null, issn_print: issnPrint || null, doi_prefix: prefix || null, doi_auto: input.doi_auto ?? true,
+  };
   if (input.logo_url === undefined) delete row.logo_url;
   const { error } = await supabase.from("journals").update(row).eq("id", j!.id);
   if (error) throw new Error(error.message);
   done();
+  return {};
 }
 
 /* ---------- editorial board */
@@ -419,7 +456,7 @@ export async function importArticles(rows: ImportRow[], skipExistingDoi: boolean
       journal_id: jid, issue_id: issueId, section_id: section?.id ?? null,
       title: r.title.slice(0, 1000), title_i18n: Object.fromEntries(Object.entries({ ru: r.title_ru, en: r.title_en }).filter(([, v]) => v)),
       abstract: r.abstract, keywords: r.keywords.slice(0, 30), language: r.language || "uz",
-      authors: r.authors.slice(0, 40), first_page: r.first_page, last_page: r.last_page, doi: r.doi || null,
+      authors: r.authors.slice(0, 40), first_page: r.first_page, last_page: r.last_page, doi: isDoi(normalizeDoi(r.doi)) ? normalizeDoi(r.doi) : null,
       pdf_path: r.pdf_path, full_text: r.full_text?.slice(0, 200_000) || null,
       status: "published", published_at: new Date(r.issue_date).toISOString(),
     });

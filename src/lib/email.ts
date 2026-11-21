@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SITE_URL } from "@/lib/site";
 import { fillTemplate, resolveEmail, type EmailKey, type Lang } from "@/lib/email-templates";
+import { isDoi } from "@/lib/identifiers";
 
 /**
  * Journal emails, sent through Resend (https://resend.com).
@@ -109,7 +110,7 @@ export async function sendJournalEmail(key: EmailKey, ctx: Ctx): Promise<"sent" 
       author_name: author?.full_name || "", reviewer_name: name, title: s.title, journal: journalName, link,
       due_date: fmtDate(due, lang), editor_note: s.decision_note ?? "",
       issue: iss?.issues ? `Vol. ${iss.issues.volumes?.number ?? ""} (${iss.issues.volumes?.year ?? ""}), No. ${iss.issues.number}` : "",
-      doi: iss?.doi ?? "—",
+      doi: isDoi(iss?.doi) ? `https://doi.org/${iss.doi}` : "—",
     };
     const tpl = resolveEmail(key, lang, saved as { subject?: Record<string, string>; body?: Record<string, string> } | null);
     const subject = fillTemplate(tpl.subject, vars);

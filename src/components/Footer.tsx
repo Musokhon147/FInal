@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { getJournal, getMenuPages, pageHref } from "@/lib/data";
 import { tr } from "@/lib/i18n-field";
 import { Logo } from "./design/StarMark";
+import { isIssn } from "@/lib/identifiers";
 
 export default async function Footer() {
   const t = await getTranslations();
@@ -24,7 +25,8 @@ export default async function Footer() {
           {pages.map((p) => <li key={p.id}><Link href={pageHref(p.slug)} className="navlink">{tr(p.title, locale)}</Link></li>)}
         </ul>
         <div className="space-y-2 text-sm text-slate-500">
-          {journal?.issn_online && <p>ISSN {journal.issn_online} (online)</p>}
+          {isIssn(journal?.issn_online) && <p>ISSN {journal.issn_online} (online)</p>}
+          {isIssn(journal?.issn_print) && <p>ISSN {journal.issn_print} (print)</p>}
           {journal?.publisher && <p>{journal.publisher}</p>}
           {journal?.contact_email && <p>{journal.contact_email}</p>}
           <p>{t("footer.license")}</p>

@@ -7,6 +7,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { uploadArticlePdf } from "@/components/admin/uploadPdf";
 import { extractPdfText } from "@/components/admin/extractPdfText";
 import { publishSubmission } from "../../actions";
+import { DOI_PATTERN } from "@/lib/identifiers";
 
 export default function PublishForm({ submissionId, issues }: { submissionId: string; issues: { id: string; label: string }[] }) {
   const t = useTranslations();
@@ -35,7 +36,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
       celebrate();
       router.push(`/admin/articles/${articleId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.error"));
+      setError(err instanceof Error && err.message === "bad-doi" ? t("ix.badDoi") : err instanceof Error ? err.message : t("common.error"));
       setBusy(false);
     }
   }
@@ -65,7 +66,11 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
         <div><label className="label">{t("admin.firstPage")}</label><input name="first_page" type="number" min={1} className="input" /></div>
         <div><label className="label">{t("admin.lastPage")}</label><input name="last_page" type="number" min={1} className="input" /></div>
       </div>
-      <div><label className="label">{t("admin.doi")}</label><input name="doi" className="input" placeholder="10.xxxx/xxxx" /></div>
+      <div>
+        <label className="label">{t("admin.doi")}</label>
+        <input name="doi" className="input" placeholder="10.xxxxx/xxxx" pattern={DOI_PATTERN} title={t("ix.badDoi")} />
+        <p className="mt-1 text-xs text-slate-500">{t("ix.doiInputHint")}</p>
+      </div>
       <div><label className="label">{t("admin.finalPdf")}</label><input name="pdf" type="file" accept="application/pdf" className="input" /></div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button className="btn-primary w-full" disabled={busy || !issues.length}>{busy ? t("common.loading") : t("admin.publish")}</button>

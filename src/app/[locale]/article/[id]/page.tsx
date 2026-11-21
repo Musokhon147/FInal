@@ -15,17 +15,21 @@ import type { Article } from "@/lib/types";
 import CiteBox from "@/components/fx/CiteBox";
 import { ViewTransition } from "react";
 import { alternates, SITE_URL } from "@/lib/site";
+import { isDoi, isIssn } from "@/lib/identifiers";
 
 type FullArticle = Article & {
   sections: { title: I18nText } | null;
-  issues: { id: string; number: number; is_special: boolean; volumes: { number: number; year: number } | null } | null;
+  issues: {
+    id: string; number: number; is_special: boolean; conference_id?: string | null;
+    volumes: { number: number; year: number } | null; conferences?: { title: I18nText } | null;
+  } | null;
 };
 
 async function load(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("articles")
-    .select("*, sections(title), issues(id, number, is_special, volumes(number, year))")
+    .select("*, sections(title), issues(id, number, is_special, conference_id, volumes(number, year), conferences(title))")
     .eq("id", id)
     .maybeSingle<FullArticle>();
   return data;
@@ -46,13 +50,16 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/article/
 }
 
 /**
- * Google Scholar (Highwire Press) tags. Rendered as elements so the order is
- * kept — Scholar expects each citation_author_institution right after its author.
- * React places <meta> tags in <head>.
+ * Google Scholar (Highwire Press) tags, plus Dublin Core for other indexes. Rendered as elements
+ * so the order is kept — Scholar expects each citation_author_institution right after its author.
+ * React places <meta> tags in <head>. Only real identifiers are given (a mistyped DOI or the
+ * "0000-0000" placeholder ISSN would make Scholar distrust the page).
  */
-function ScholarTags({ a, journalTitle, issn, publisher, locale }: { a: FullArticle; journalTitle: string; issn?: string | null; publisher?: string | null; locale: string }) {
+function ScholarTags({ a, journalTitle, issns, publisher, locale }: { a: FullArticle; journalTitle: string; issns: string[]; publisher?: string | null; locale: string }) {
   const date = a.published_at?.slice(0, 10).replaceAll("-", "/");
   const url = `${SITE_URL}/${locale}/article/${a.id}`;
+  const doi = isDoi(a.doi) ? a.doi : null;
+  const conference = a.issues?.conferences ? tr(a.issues.conferences.title, "en") || tr(a.issues.conferences.title, locale) : "";
   const m = (name: string, content: string | number | null | undefined, key?: string | number) =>
     content === null || content === undefined || content === "" ? null : <meta key={key ?? name} name={name} content={String(content)} />;
   return (
@@ -60,19 +67,31 @@ function ScholarTags({ a, journalTitle, issn, publisher, locale }: { a: FullArti
       {m("citation_title", a.title)}
       {a.authors.flatMap((au, i) => [m("citation_author", au.name, `au${i}`), m("citation_author_institution", au.affiliation, `inst${i}`), au.orcid ? m("citation_author_orcid", `https://orcid.org/${au.orcid}`, `orcid${i}`) : null])}
       {m("citation_publication_date", date)}
-      {m("citation_journal_title", journalTitle)}
-      {m("citation_issn", issn)}
+      {conference ? m("citation_conference_title", conference) : m("citation_journal_title", journalTitle)}
+      {issns.map((x, i) => m("citation_issn", x, `issn${i}`))}
       {m("citation_publisher", publisher)}
       {m("citation_volume", a.issues?.volumes?.number)}
       {m("citation_issue", a.issues?.number)}
       {m("citation_firstpage", a.first_page)}
       {m("citation_lastpage", a.last_page)}
-      {m("citation_doi", a.doi)}
+      {m("citation_doi", doi)}
       {m("citation_language", a.language)}
       {m("citation_keywords", a.keywords.join("; "))}
       {m("citation_abstract_html_url", url)}
       {/* full text under the article's own address, as Scholar requires */}
       {a.pdf_path ? m("citation_pdf_url", `${url}/full-text.pdf`) : null}
+      {/* Dublin Core (BASE, CyberLeninka, national catalogues) */}
+      {m("DC.title", a.title)}
+      {a.authors.map((au, i) => m("DC.creator", au.name, `dc-au${i}`))}
+      {m("DC.date", a.published_at?.slice(0, 10))}
+      {m("DC.identifier", doi ? `https://doi.org/${doi}` : url)}
+      {m("DC.source", conference || journalTitle)}
+      {issns[0] ? m("DC.source.ISSN", issns[0]) : null}
+      {m("DC.publisher", publisher)}
+      {m("DC.language", a.language)}
+      {m("DC.subject", a.keywords.join("; "))}
+      {m("DC.type", "Text.Serial.Journal")}
+      {m("DC.rights", "https://creativecommons.org/licenses/by/4.0/")}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "ScholarlyArticle",
@@ -84,8 +103,10 @@ function ScholarTags({ a, journalTitle, issn, publisher, locale }: { a: FullArti
         keywords: a.keywords.join(", "),
         abstract: a.abstract,
         url,
-        identifier: a.doi ? { "@type": "PropertyValue", propertyID: "DOI", value: a.doi } : undefined,
-        isPartOf: { "@type": "Periodical", name: journalTitle, issn: issn ?? undefined },
+        sameAs: doi ? `https://doi.org/${doi}` : undefined,
+        identifier: doi ? { "@type": "PropertyValue", propertyID: "DOI", value: doi } : undefined,
+        isPartOf: { "@type": "Periodical", name: journalTitle, issn: issns.length ? issns : undefined },
+        isAccessibleForFree: true,
         license: "https://creativecommons.org/licenses/by/4.0/",
       }).replace(/</g, "\\u003c") }} />
     </>
@@ -116,10 +137,10 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
   const range = pagesRange(a.first_page, a.last_page);
   const iss = a.issues, v = iss?.volumes;
   const year = a.published_at ? new Date(a.published_at).getFullYear() : "";
-  const names = a.authors.map((x) => x.name), jt = tr(journal?.title, locale), doiUrl = a.doi ? `https://doi.org/${a.doi}` : "";
+  const names = a.authors.map((x) => x.name), jt = tr(journal?.title, locale), doi = isDoi(a.doi) ? a.doi : null, doiUrl = doi ? `https://doi.org/${doi}` : "";
   const formats = {
     apa: `${names.join(", ")} (${year}). ${a.title}. ${jt}${v && iss ? `, ${v.number}(${iss.number})` : ""}${range ? `, ${range}` : ""}.${doiUrl ? ` ${doiUrl}` : ""}`,
-    gost: `${names.join(", ")}. ${a.title} // ${jt}. – ${year}.${v ? ` – Т. ${v.number}` : ""}${iss ? `, № ${iss.number}` : ""}.${range ? ` – С. ${range}` : ""}.${a.doi ? ` – DOI: ${a.doi}` : ""}`,
+    gost: `${names.join(", ")}. ${a.title} // ${jt}. – ${year}.${v ? ` – Т. ${v.number}` : ""}${iss ? `, № ${iss.number}` : ""}.${range ? ` – С. ${range}` : ""}.${doi ? ` – DOI: ${doi}` : ""}`,
     mla: `${names.join(", ")}. "${a.title}." ${jt}${v ? `, vol. ${v.number}` : ""}${iss ? `, no. ${iss.number}` : ""}, ${year}${range ? `, pp. ${range}` : ""}.${doiUrl ? ` ${doiUrl}.` : ""}`,
   };
   const toc = ([
@@ -132,7 +153,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
 
   return (
     <>
-      <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issn={journal?.issn_online} publisher={journal?.publisher} locale={locale} />
+      <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issns={[journal?.issn_online, journal?.issn_print].filter(isIssn)} publisher={journal?.publisher} locale={locale} />
       <span data-scene={`glyph:${(trExact(a.title_i18n, locale) || a.title).trim().charAt(0).toUpperCase()}`} hidden />
       <div id="readbar" className="read-progress" aria-hidden="true" />
       <ReadingRing />
@@ -214,7 +235,7 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
             {a.published_at && <div><dt className="text-slate-500">{t("article.published")}</dt><dd>{formatDate(a.published_at, locale)}</dd></div>}
             {iss && <div><dt className="text-slate-500">{t("article.issue")}</dt><dd>{issueLabel(t, iss)}</dd></div>}
             {range && <div><dt className="text-slate-500">{t("article.pages")}</dt><dd>{range}</dd></div>}
-            {a.doi && <div><dt className="text-slate-500">DOI</dt><dd><a className="break-all text-brand-700 hover:underline" href={doiUrl}>{a.doi}</a></dd></div>}
+            {doi && <div><dt className="text-slate-500">DOI</dt><dd><a className="break-all text-brand-700 hover:underline" href={doiUrl}>{doi}</a></dd></div>}
             <div><dt className="text-slate-500">{t("article.license")}</dt><dd>{a.license}</dd></div>
             <div className="inline-block pr-6"><dt className="text-slate-500">{t("article.views")}</dt><dd>{a.views}</dd></div>
             <div className="inline-block"><dt className="text-slate-500">{t("article.downloads")}</dt><dd>{a.downloads}</dd></div>

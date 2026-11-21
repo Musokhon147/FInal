@@ -47,6 +47,8 @@ export interface Journal {
   description: I18nText;
   issn_print: string | null;
   issn_online: string | null;
+  doi_prefix?: string | null;
+  doi_auto?: boolean;
   publisher: string | null;
   cover_url: string | null;
   author_kits?: AuthorKits;
@@ -155,6 +157,8 @@ export interface Article {
   first_page: number | null;
   last_page: number | null;
   doi: string | null;
+  doi_status?: "none" | "queued" | "registered" | "failed";
+  doi_message?: string | null;
   pdf_path: string | null;
   license: string;
   sort_order: number;

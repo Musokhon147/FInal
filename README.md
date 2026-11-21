@@ -65,6 +65,7 @@ A yellow banner shows the site is in demo mode. Changes are kept in memory and r
    - `supabase/migrations/20261118020000_pending_roles.sql` (give a role to an email before that person registers)
    - `supabase/migrations/20261118030000_email_log.sql` (log of journal emails)
    - `supabase/migrations/20261118040000_submitted_at_for_staff.sql` (submission date also for staff)
+   - `supabase/migrations/20261121000000_doi_issn_indexing.sql` (DOI prefix and status, Crossref deposit log)
 3. **Environment variables**: in Vercel → Project → Settings → Environment Variables (or `.env.local` locally) set
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Supabase → Project Settings → API,
    then redeploy. The demo banner disappears and the site uses the real database.
@@ -105,8 +106,25 @@ when the issue is published.
   `{"uz": "...", "ru": "...", "en": "..."}`; missing translations fall back to Uzbek.
 - Articles keep their original language, with optional translated titles/abstracts.
 
-## Indexing
-Article pages include Google Scholar `citation_*` meta tags (title, authors, date, volume, issue, pages, DOI, PDF URL).
+## Indexing, DOI and ISSN
+Admin → **Indexing, DOI & ISSN** shows what is set up and what is left.
+
+- **Google Scholar**: every article page has Highwire `citation_*` tags (plus Dublin Core `DC.*` and schema.org JSON-LD);
+  the PDF is served at `/{locale}/article/{id}/full-text.pdf`, beside its abstract page. Only valid ISSNs and DOIs are output.
+- **OAI-PMH** at `/oai` (Dublin Core, sets `journal` and `conference`) for BASE, CORE, OpenAIRE and other harvesters.
+- **ISSN**: typed in Settings (online and print), checked by its check digit, shown in the footer, home page, Scholar tags and Crossref.
+- **DOI (Crossref)**: type the prefix (10.xxxxx) in Settings. New articles then get `prefix/YEAR.first-8-chars-of-id`
+  when published, and are registered with Crossref (schema 5.3.1; journal articles, and conference theses as conference papers).
+  Editing a registered article sends the new details again. Environment variables (Vercel, type Secret):
+
+  | Variable | |
+  |---|---|
+  | `CROSSREF_USERNAME`, `CROSSREF_PASSWORD` | Crossref login (`email/role` for personal accounts) |
+  | `CROSSREF_TEST=1` | optional: send to test.crossref.org instead |
+  | `CROSSREF_EMAIL` | optional: depositor email when the journal has no contact email |
+
+  A daily job (`/api/cron/crossref`, needs `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY`) reads Crossref's results.
+  Without a login, the page offers the deposit XML to upload by hand.
 
 ## Project layout
 ```

@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { tr, trExact, type I18nText } from "@/lib/i18n-field";
 import { pagesRange } from "@/lib/data";
 import type { Article } from "@/lib/types";
+import { isDoi } from "@/lib/identifiers";
 
 export type ListedArticle = Pick<
   Article,
@@ -36,7 +37,7 @@ export default async function ArticleList({ articles, snippets }: { articles: Li
             )}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               {range && <span className="text-slate-500">{t("issue.pages", { range })}</span>}
-              {a.doi && <a href={`https://doi.org/${a.doi}`} className="text-brand-700 hover:underline" target="_blank" rel="noreferrer">DOI: {a.doi}</a>}
+              {isDoi(a.doi) && <a href={`https://doi.org/${a.doi}`} className="text-brand-700 hover:underline" target="_blank" rel="noreferrer">DOI: {a.doi}</a>}
               {a.pdf_path && <a href={`/api/download/${a.id}`} className="rounded bg-brand-50 px-2 py-0.5 font-medium text-brand-700 hover:bg-brand-100">PDF</a>}
               {typeof a.views === "number" && (
                 <span className="ml-auto flex items-center gap-3 text-xs text-slate-500">

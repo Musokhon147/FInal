@@ -12,6 +12,7 @@ import { SITE_URL } from "@/lib/site";
 import type { Article } from "@/lib/types";
 import Certificate from "@/components/design/Certificate";
 import PrintButton from "@/components/fx/PrintButton";
+import { isDoi } from "@/lib/identifiers";
 
 export const metadata: Metadata = { robots: { index: false } };
 
@@ -30,7 +31,7 @@ export default async function PublicationCertificate({ params }: PageProps<"/[lo
   const [journal, chief] = await Promise.all([getJournal(), chiefEditorName(locale)]);
   const jt = tr(journal?.title, locale);
   const range = pagesRange(a.first_page, a.last_page);
-  const details = [a.issues ? issueLabel(t, a.issues) : "", range ? t("issue.pages", { range }) : "", a.doi ? `DOI: ${a.doi}` : ""].filter(Boolean);
+  const details = [a.issues ? issueLabel(t, a.issues) : "", range ? t("issue.pages", { range }) : "", isDoi(a.doi) ? `DOI: ${a.doi}` : ""].filter(Boolean);
 
   return (
     <div className="space-y-6">

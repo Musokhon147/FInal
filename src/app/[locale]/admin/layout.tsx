@@ -33,6 +33,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
     { title: tn("pt.gSettings"), items: [
       ...(admin ? [{ href: "/admin/settings", label: tn("x.settings") }, { href: "/admin/users", label: t("users") }] : []),
       { href: "/admin/emails", label: tn("adm.emails") },
+      { href: "/admin/indexing", label: tn("ix.menu") },
     ] },
     { title: tn("pt.gTools"), folded: true, items: [
       { href: "/admin/stats", label: tn("adm.stats") },
