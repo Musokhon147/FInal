@@ -264,8 +264,8 @@ export async function savePage(formData: FormData) {
 export async function saveSettings(input: {
   title: Record<string, string>; description: Record<string, string>; issn_online: string; issn_print?: string; publisher: string;
   contact_email: string; indexes: string[]; cfp_deadline: string | null; cfp_text: Record<string, string>; logo_url?: string | null;
-  doi_prefix?: string; doi_auto?: boolean;
-}): Promise<{ error?: "bad-issn-online" | "bad-issn-print" | "bad-prefix" }> {
+  doi_prefix?: string; doi_auto?: boolean; google_verification?: string;
+}): Promise<{ error?: "bad-issn-online" | "bad-issn-print" | "bad-prefix" | "bad-google" }> {
   const { supabase, profile } = await staff();
   if (profile?.role !== "admin") throw new Error("Forbidden");
   // numbers are checked here, so a typo never reaches Google Scholar or Crossref
@@ -274,9 +274,14 @@ export async function saveSettings(input: {
   if (issnPrint && !isIssn(issnPrint)) return { error: "bad-issn-print" };
   const prefix = String(input.doi_prefix ?? "").trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").replace(/\/$/, "");
   if (prefix && !isDoiPrefix(prefix)) return { error: "bad-prefix" };
+  // Search Console gives a whole tag: <meta name="google-site-verification" content="CODE" /> — keep only the code
+  const gRaw = String(input.google_verification ?? "").trim();
+  const google = gRaw.match(/content=["']([^"']+)["']/)?.[1]?.trim() ?? gRaw;
+  if (google && !/^[A-Za-z0-9_-]{10,100}$/.test(google)) return { error: "bad-google" };
   const { data: j } = await supabase.from("journals").select("id").eq("is_active", true).order("sort_order").limit(1).single();
   const row: Record<string, unknown> = {
     ...input, issn_online: issnOnline || null, issn_print: issnPrint || null, doi_prefix: prefix || null, doi_auto: input.doi_auto ?? true,
+    google_verification: google || null,
   };
   if (input.logo_url === undefined) delete row.logo_url;
   const { error } = await supabase.from("journals").update(row).eq("id", j!.id);

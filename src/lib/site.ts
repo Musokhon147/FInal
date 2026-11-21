@@ -17,3 +17,12 @@ export function alternates(locale: string, path = "") {
     },
   };
 }
+
+/**
+ * The one language version of an article that Google Scholar, Crossref and the indexes see:
+ * the article's own language (uz / ru / en), else the default. The other two versions point to it.
+ */
+export function articleLocale(language: string | null | undefined): string {
+  return (routing.locales as readonly string[]).includes(language ?? "") ? (language as string) : routing.defaultLocale;
+}
+export const articleUrl = (id: string, language?: string | null) => `${SITE_URL}/${articleLocale(language)}/article/${id}`;

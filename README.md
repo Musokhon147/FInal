@@ -66,6 +66,7 @@ A yellow banner shows the site is in demo mode. Changes are kept in memory and r
    - `supabase/migrations/20261118030000_email_log.sql` (log of journal emails)
    - `supabase/migrations/20261118040000_submitted_at_for_staff.sql` (submission date also for staff)
    - `supabase/migrations/20261121000000_doi_issn_indexing.sql` (DOI prefix and status, Crossref deposit log)
+   - `supabase/migrations/20261121010000_scholar_readiness.sql` (Search Console code, PDF sizes for the Scholar check)
 3. **Environment variables**: in Vercel → Project → Settings → Environment Variables (or `.env.local` locally) set
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Supabase → Project Settings → API,
    then redeploy. The demo banner disappears and the site uses the real database.
@@ -111,6 +112,7 @@ Admin → **Indexing, DOI & ISSN** shows what is set up and what is left.
 
 - **Google Scholar**: every article page has Highwire `citation_*` tags (plus Dublin Core `DC.*` and schema.org JSON-LD);
   the PDF is served at `/{locale}/article/{id}/full-text.pdf`, beside its abstract page. Only valid ISSNs and DOIs are output.
+- **One address per article**: the article's own language page (`/uz|ru|en/article/{id}`) is canonical and alone carries the Scholar tags; the sitemap, DOI and OAI use it. The admin page lists articles Scholar may skip (no abstract, no PDF, PDF over 5 MB, duplicate title) and the Search Console steps; the verification tag is pasted in Settings.
 - **OAI-PMH** at `/oai` (Dublin Core, sets `journal` and `conference`) for BASE, CORE, OpenAIRE and other harvesters.
 - **ISSN**: typed in Settings (online and print), checked by its check digit, shown in the footer, home page, Scholar tags and Crossref.
 - **DOI (Crossref)**: type the prefix (10.xxxxx) in Settings. New articles then get `prefix/YEAR.first-8-chars-of-id`

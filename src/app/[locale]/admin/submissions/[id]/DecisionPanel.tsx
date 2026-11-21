@@ -7,6 +7,7 @@ import { uploadArticlePdf } from "@/components/admin/uploadPdf";
 import { extractPdfText } from "@/components/admin/extractPdfText";
 import { celebrate } from "@/lib/celebrate";
 import { quickPublish, setDecision } from "../../actions";
+import PdfInput from "@/components/admin/PdfInput";
 
 type Props = {
   submissionId: string;
@@ -83,7 +84,7 @@ export default function DecisionPanel({ submissionId, status, note, articleId, m
         <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">{t("acceptedNotLive")}</p>
         <label className="block text-xs text-slate-500">
           {t("finalPdfOptional")}
-          <input ref={fileRef} type="file" accept="application/pdf" className="input mt-1" />
+          <PdfInput ref={fileRef} className="input mt-1" />
         </label>
         {error && <p className="text-sm text-red-400" role="alert">{error === "error" ? "!" : error}</p>}
         <button type="button" className="btn-gold w-full justify-center py-3 text-base" disabled={busy} onClick={() => publish(fileRef.current?.files?.[0] ?? null)}>

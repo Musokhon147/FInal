@@ -8,6 +8,7 @@ import { uploadArticlePdf } from "@/components/admin/uploadPdf";
 import { extractPdfText } from "@/components/admin/extractPdfText";
 import { publishSubmission } from "../../actions";
 import { DOI_PATTERN } from "@/lib/identifiers";
+import PdfInput from "@/components/admin/PdfInput";
 
 export default function PublishForm({ submissionId, issues }: { submissionId: string; issues: { id: string; label: string }[] }) {
   const t = useTranslations();
@@ -71,7 +72,7 @@ export default function PublishForm({ submissionId, issues }: { submissionId: st
         <input name="doi" className="input" placeholder="10.xxxxx/xxxx" pattern={DOI_PATTERN} title={t("ix.badDoi")} />
         <p className="mt-1 text-xs text-slate-500">{t("ix.doiInputHint")}</p>
       </div>
-      <div><label className="label">{t("admin.finalPdf")}</label><input name="pdf" type="file" accept="application/pdf" className="input" /></div>
+      <div><label className="label">{t("admin.finalPdf")}</label><PdfInput name="pdf" className="input" /></div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button className="btn-primary w-full" disabled={busy || !issues.length}>{busy ? t("common.loading") : t("admin.publish")}</button>
     </form>

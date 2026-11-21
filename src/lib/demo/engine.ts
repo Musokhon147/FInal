@@ -323,6 +323,10 @@ function runRpc(name: string, args: any, uid: string | null): Result {
     const acc = finals.filter((x: any) => x.status !== "rejected").length;
     return { data: [{ decision_days: days.length ? Math.round(days.reduce((p, c) => p + c, 0) / days.length) : 0, acceptance_rate: finals.length ? Math.round((100 * acc) / finals.length) : 0 }], error: null };
   }
+  if (name === "article_pdf_sizes") {
+    // sample PDFs are small; one is "too big" so the Scholar check can be seen
+    return { data: store.articles.filter((x: any) => x.pdf_path).map((x: any) => ({ name: x.pdf_path, size: x.id === "art-3" ? 6_500_000 : 900_000 })), error: null };
+  }
   void uid;
   return { data: null, error: { message: `Unknown rpc ${name}` } };
 }

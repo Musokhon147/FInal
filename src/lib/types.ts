@@ -49,6 +49,7 @@ export interface Journal {
   issn_online: string | null;
   doi_prefix?: string | null;
   doi_auto?: boolean;
+  google_verification?: string | null;
   publisher: string | null;
   cover_url: string | null;
   author_kits?: AuthorKits;

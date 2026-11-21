@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { routing } from "@/i18n/routing";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, articleUrl } from "@/lib/site";
 import { doiFor, isDoi, isDoiPrefix, isIssn } from "@/lib/identifiers";
 import type { I18nText } from "@/lib/i18n-field";
 
@@ -81,7 +81,6 @@ function date(tag: string, iso: string | null | undefined, attrs = ' media_type=
   return `<${tag}${attrs}><month>${String(d.getUTCMonth() + 1).padStart(2, "0")}</month><day>${String(d.getUTCDate()).padStart(2, "0")}</day><year>${d.getUTCFullYear()}</year></${tag}>`;
 }
 
-const landing = (id: string) => `${SITE_URL}/${routing.defaultLocale}/article/${id}`;
 
 function contributors(a: DepositArticle) {
   if (!a.authors?.length) return "";
@@ -103,7 +102,7 @@ function common(a: DepositArticle, pubDate: string | null) {
     date: date("publication_date", a.published_at ?? pubDate),
     pages: a.first_page ? `<pages><first_page>${a.first_page}</first_page>${a.last_page ? `<last_page>${a.last_page}</last_page>` : ""}</pages>` : "",
     license: `<ai:program name="AccessIndicators"><ai:free_to_read/><ai:license_ref applies_to="vor">https://creativecommons.org/licenses/by/4.0/</ai:license_ref></ai:program>`,
-    doi: `<doi_data><doi>${esc(a.doi)}</doi><resource>${esc(landing(a.id))}</resource></doi_data>`,
+    doi: `<doi_data><doi>${esc(a.doi)}</doi><resource>${esc(articleUrl(a.id, a.language))}</resource></doi_data>`,
     refs: citations(a.references),
   };
 }

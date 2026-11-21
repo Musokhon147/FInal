@@ -9,7 +9,12 @@ import { isDoi, isDoiPrefix, isIssn } from "@/lib/identifiers";
 import CopyField from "./CopyField";
 import DoiActions from "./DoiActions";
 
-type Row = { id: string; title: string; doi: string | null; doi_status: string; doi_message: string | null; published_at: string | null };
+type Row = {
+  id: string; title: string; doi: string | null; doi_status: string; doi_message: string | null; published_at: string | null;
+  abstract: string; authors: { name: string }[]; pdf_path: string | null;
+};
+type Problem = "noAbstract" | "noAuthors" | "noPdf" | "bigPdf" | "dupTitle";
+const PDF_LIMIT = 5 * 1024 * 1024;
 type Dep = { id: number; file_name: string; article_ids: string[]; test: boolean; status: string; success: number; failure: number; message: string | null; created_at: string };
 type RowState = "noDoi" | "bad" | "other" | "none" | "queued" | "registered" | "failed";
 
@@ -40,12 +45,30 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
   const { supabase, profile } = await getSession();
   const admin = profile?.role === "admin";
   const journal = await getJournal();
-  const [{ data: arts }, { data: deps }] = await Promise.all([
-    supabase.from("articles").select("id, title, doi, doi_status, doi_message, published_at").eq("status", "published").order("published_at", { ascending: false }).limit(1000),
+  const [{ data: arts }, { data: deps }, { data: sizeRows }] = await Promise.all([
+    supabase.from("articles").select("id, title, doi, doi_status, doi_message, published_at, abstract, authors, pdf_path").eq("status", "published").order("published_at", { ascending: false }).limit(1000),
     supabase.from("crossref_deposits").select("id, file_name, article_ids, test, status, success, failure, message, created_at").order("created_at", { ascending: false }).limit(8),
+    supabase.rpc("article_pdf_sizes"),
   ]);
   const rows = (arts ?? []) as Row[];
   const deposits = (deps ?? []) as Dep[];
+
+  // Google Scholar readiness, per article
+  const sizes = new Map(((Array.isArray(sizeRows) ? sizeRows : []) as { name: string; size: number }[]).map((r) => [r.name, Number(r.size)]));
+  const norm = (x: string) => x.toLowerCase().replace(/\s+/g, " ").trim();
+  const titleCount = rows.reduce((m, r) => m.set(norm(r.title), (m.get(norm(r.title)) ?? 0) + 1), new Map<string, number>());
+  const problems = rows.map((r) => {
+    const size = r.pdf_path ? sizes.get(r.pdf_path) : undefined;
+    const list: { k: Problem; mb?: string }[] = [];
+    if (r.abstract.replace(/<[^>]+>/g, "").trim().length < 50) list.push({ k: "noAbstract" });
+    if (!r.authors?.length) list.push({ k: "noAuthors" });
+    if (!r.pdf_path) list.push({ k: "noPdf" });
+    if (size && size > PDF_LIMIT) list.push({ k: "bigPdf", mb: (size / 1048576).toFixed(1) });
+    if ((titleCount.get(norm(r.title)) ?? 0) > 1) list.push({ k: "dupTitle" });
+    return { r, list };
+  }).filter((x) => x.list.length);
+  const ready = rows.length - problems.length;
+  const google = journal?.google_verification ?? null;
 
   const prefix = isDoiPrefix(journal?.doi_prefix) ? journal!.doi_prefix! : null;
   const connected = crossrefConfigured();
@@ -80,18 +103,54 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
       </div>
 
       {/* ---------------------------------------------------------- Google Scholar */}
-      <section className="card space-y-4" aria-labelledby="ix-scholar">
+      <section className="card space-y-5" aria-labelledby="ix-scholar">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="ix-scholar" className="text-xl">{t("scholarTitle")}</h2>
-          <Pill ok>{t("on")}</Pill>
+          <Pill ok={!problems.length && rows.length > 0} partly>{problems.length || !rows.length ? t("on") : t("scholarAllReadyPill")}</Pill>
         </div>
         <p className="max-w-2xl text-sm text-slate-600">{t("scholarText")}</p>
-        <ul className="space-y-1.5 text-sm">
-          <li>{t("scholarArticles", { count: rows.length })}</li>
-          <li><a className={ext} href={`${SITE_URL}/sitemap.xml`} target="_blank" rel="noreferrer">{t("scholarSitemap")} ↗</a></li>
-          <li><a className={ext} href={`https://scholar.google.com/scholar?q=site%3A${encodeURIComponent(host)}`} target="_blank" rel="noreferrer">{t("scholarCheck")} ↗</a></li>
-          <li><a className={ext} href="https://search.google.com/search-console" target="_blank" rel="noreferrer">{t("scholarConsole")} ↗</a></li>
-        </ul>
+
+        <div className="space-y-2">
+          <h3 className="text-base">{t("articlesTitle")}</h3>
+          {!rows.length ? <p className="text-sm text-slate-500">{t("noArticles")}</p>
+            : !problems.length ? <p className="text-sm text-accent">✓ {t("scholarAllReady", { count: rows.length })}</p>
+            : (
+              <>
+                <p className="text-sm text-slate-600">{t("scholarReady", { ready, total: rows.length })}</p>
+                <ul className="space-y-1.5 text-sm">
+                  {problems.slice(0, 30).map(({ r, list }) => (
+                    <li key={r.id} className="rounded-lg border border-slate-200 px-3 py-2">
+                      <Link href={`/admin/articles/${r.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">{r.title}</Link>
+                      <span className="block text-xs text-red-400">{list.map((p) => t(`p_${p.k}`, { mb: p.mb ?? "" })).join(" · ")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-base">{t("gscTitle")}</h3>
+          <p className="max-w-2xl text-sm text-slate-600">{t("gscText")}</p>
+          <ol className="space-y-4">
+            <Step done={!!google} title={t("gsc1")}>
+              <p className="mb-1.5">{t("gsc1Text")}</p>
+              <CopyField value={`${SITE_URL}/`} copy={t("copy")} copied={t("copied")} />
+              <a className={`mt-1 inline-block ${ext}`} href="https://search.google.com/search-console" target="_blank" rel="noreferrer">{t("openSearchConsole")} ↗</a>
+            </Step>
+            <Step done={!!google} title={t("gsc2")}>
+              {google ? <p className="text-accent">{t("gsc2Done")}</p> : (
+                <p>{t("gsc2Text")} {admin && <Link className={ext} href="/admin/settings">{t("toSettings")}</Link>}</p>
+              )}
+            </Step>
+            <Step done={false} title={t("gsc3")}>
+              <p className="mb-1.5">{t("gsc3Text")}</p>
+              <CopyField value={`${SITE_URL}/sitemap.xml`} copy={t("copy")} copied={t("copied")} />
+            </Step>
+          </ol>
+        </div>
+
+        <a className={`inline-block text-sm ${ext}`} href={`https://scholar.google.com/scholar?q=site%3A${encodeURIComponent(host)}`} target="_blank" rel="noreferrer">{t("scholarCheck")} ↗</a>
       </section>
 
       {/* ---------------------------------------------------------- OAI-PMH indexes */}

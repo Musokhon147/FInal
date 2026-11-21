@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { uploadArticlePdf } from "@/components/admin/uploadPdf";
 import { extractPdfText } from "@/components/admin/extractPdfText";
 import { setArticlePdf } from "../../actions";
+import PdfInput from "@/components/admin/PdfInput";
 
 export default function PdfReplace({ articleId }: { articleId: string }) {
   const t = useTranslations("common");
@@ -32,7 +33,7 @@ export default function PdfReplace({ articleId }: { articleId: string }) {
         }
       }}
     >
-      <input type="file" name="pdf" accept="application/pdf" className="input max-w-sm" required />
+      <PdfInput name="pdf" className="input max-w-sm" required />
       <button className="btn-secondary" disabled={busy}>{busy ? t("loading") : t("save")}</button>
       {error && <p className="w-full text-sm text-red-400">{error}</p>}
     </form>

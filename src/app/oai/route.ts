@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { IS_DEMO } from "@/lib/supabase/env";
-import { routing } from "@/i18n/routing";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, articleUrl } from "@/lib/site";
 import { isDoi, isIssn } from "@/lib/identifiers";
 import type { I18nText } from "@/lib/i18n-field";
 
@@ -52,7 +51,7 @@ function header(r: Row) {
 }
 
 function record(r: Row, j: Journal | null) {
-  const url = `${SITE_URL}/${routing.defaultLocale}/article/${r.id}`;
+  const url = articleUrl(r.id, r.language);
   const v = r.issues?.volumes, iss = r.issues;
   const range = r.first_page ? `${r.first_page}${r.last_page ? `-${r.last_page}` : ""}` : "";
   const issn = isIssn(j?.issn_online) ? j!.issn_online : isIssn(j?.issn_print) ? j!.issn_print : null;

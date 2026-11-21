@@ -30,6 +30,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description: tr(journal?.description, locale),
     openGraph: { siteName: name, type: "website", locale: locale === "uz" ? "uz_UZ" : locale === "ru" ? "ru_RU" : "en_GB" },
     twitter: { card: "summary_large_image" },
+    // Google Search Console "HTML tag" verification, pasted in Settings
+    verification: journal?.google_verification ? { google: journal.google_verification } : undefined,
   };
 }
 

@@ -31,6 +31,7 @@ export default function SettingsForm({ journal }: { journal: Journal }) {
         title: i18nOf(fd, "title"), description: i18nOf(fd, "description"), cfp_text: i18nOf(fd, "cfp_text"),
         issn_online: String(fd.get("issn_online") ?? ""), issn_print: String(fd.get("issn_print") ?? ""),
         doi_prefix: String(fd.get("doi_prefix") ?? ""), doi_auto: fd.get("doi_auto") === "on",
+        google_verification: String(fd.get("google_verification") ?? ""),
         publisher: String(fd.get("publisher") ?? ""),
         contact_email: String(fd.get("contact_email") ?? ""),
         indexes: String(fd.get("indexes") ?? "").split(",").map((x) => x.trim()).filter(Boolean),
@@ -38,8 +39,9 @@ export default function SettingsForm({ journal }: { journal: Journal }) {
       });
       if (res?.error) {
         setFieldError(res.error);
-        setMsg(t(res.error === "bad-prefix" ? "ix.badPrefix" : "ix.badIssn"));
-        document.getElementsByName(res.error === "bad-prefix" ? "doi_prefix" : res.error === "bad-issn-print" ? "issn_print" : "issn_online")[0]?.focus();
+        setMsg(t(res.error === "bad-prefix" ? "ix.badPrefix" : res.error === "bad-google" ? "ix.badGoogle" : "ix.badIssn"));
+        const field = { "bad-prefix": "doi_prefix", "bad-issn-print": "issn_print", "bad-issn-online": "issn_online", "bad-google": "google_verification" }[res.error];
+        document.getElementsByName(field)[0]?.focus();
         return;
       }
       if (logo_url) setLogo(logo_url);
@@ -71,7 +73,7 @@ export default function SettingsForm({ journal }: { journal: Journal }) {
         <label><span className="label">{t("x.contactEmail")}</span><input name="contact_email" type="email" defaultValue={journal.contact_email ?? ""} className="input" /></label>
       </div>
       <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-slate-900">{t("ix.numbers")}</legend>
+        <legend className="px-1 text-sm font-semibold text-slate-900">{t("ix.numbersLegend")}</legend>
         <div className="grid gap-3 sm:grid-cols-3">
           <label><span className="label">{t("ix.issnOnlineLabel")}</span>
             <input name="issn_online" defaultValue={journal.issn_online ?? ""} placeholder="1234-5679" inputMode="numeric" aria-invalid={fieldError === "bad-issn-online" || undefined} className="input" /></label>
@@ -82,6 +84,11 @@ export default function SettingsForm({ journal }: { journal: Journal }) {
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" name="doi_auto" defaultChecked={journal.doi_auto ?? true} /> {t("ix.doiAuto")}
+        </label>
+        <label className="block"><span className="label">{t("ix.googleLabel")}</span>
+          <input name="google_verification" defaultValue={journal.google_verification ?? ""} placeholder={'<meta name="google-site-verification" content="…" />'}
+            aria-invalid={fieldError === "bad-google" || undefined} aria-describedby="google-hint" className="input font-mono text-xs" />
+          <span id="google-hint" className="mt-1 block text-xs text-slate-500">{t("ix.googleHint")}</span>
         </label>
         <p className="text-xs text-slate-500">{t("ix.numbersHint")} <Link href="/admin/indexing" className="text-brand-700 hover:underline">{t("ix.menu")}</Link></p>
       </fieldset>

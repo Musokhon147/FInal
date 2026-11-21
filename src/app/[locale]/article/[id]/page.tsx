@@ -14,7 +14,7 @@ import { issueLabel } from "@/lib/issue-label";
 import type { Article } from "@/lib/types";
 import CiteBox from "@/components/fx/CiteBox";
 import { ViewTransition } from "react";
-import { alternates, SITE_URL } from "@/lib/site";
+import { alternates, articleLocale, SITE_URL } from "@/lib/site";
 import { isDoi, isIssn } from "@/lib/identifiers";
 
 type FullArticle = Article & {
@@ -44,7 +44,8 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/article/
   return {
     title,
     description,
-    alternates: alternates(locale, `/article/${a.id}`),
+    // one address per article for search engines and Scholar: its own language version
+    alternates: { ...alternates(locale, `/article/${a.id}`), canonical: `/${articleLocale(a.language)}/article/${a.id}` },
     openGraph: { type: "article", title, description, publishedTime: a.published_at ?? undefined, authors: a.authors.map((x) => x.name) },
   };
 }
@@ -153,7 +154,8 @@ export default async function ArticlePage({ params }: PageProps<"/[locale]/artic
 
   return (
     <>
-      <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issns={[journal?.issn_online, journal?.issn_print].filter(isIssn)} publisher={journal?.publisher} locale={locale} />
+      {/* Scholar reads one version of each article: the one in its own language (the others point there) */}
+      {locale === articleLocale(a.language) && <ScholarTags a={a} journalTitle={tr(journal?.title, "en") || jt} issns={[journal?.issn_online, journal?.issn_print].filter(isIssn)} publisher={journal?.publisher} locale={locale} />}
       <span data-scene={`glyph:${(trExact(a.title_i18n, locale) || a.title).trim().charAt(0).toUpperCase()}`} hidden />
       <div id="readbar" className="read-progress" aria-hidden="true" />
       <ReadingRing />

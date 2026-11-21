@@ -32,7 +32,7 @@ export function createSeed(): DemoDb {
       ru: "Международный рецензируемый научный журнал. Все статьи в открытом доступе: читайте и скачивайте бесплатно.",
       en: "An international peer-reviewed scientific journal. All articles are open access: free to read and download.",
     },
-    issn_print: null, issn_online: "0000-0000", doi_prefix: null, doi_auto: true, publisher: "[Publisher name]", cover_url: null, apc_amount: 300000, apc_currency: "UZS",
+    issn_print: null, issn_online: null, doi_prefix: null, doi_auto: true, google_verification: null, publisher: "[Publisher name]", cover_url: null, apc_amount: 300000, apc_currency: "UZS",
     logo_url: null, contact_email: "editor@example.uz",
     indexes: ["Google Scholar", "Crossref", "OpenAlex", "BASE", "ROAD", "CyberLeninka"],
     cfp_deadline: "2026-12-20",
