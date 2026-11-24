@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
 import { routing } from "@/i18n/routing";
 import { createPublicClient } from "@/lib/supabase/public";
 import { SITE_URL, articleLocale } from "@/lib/site";
 import { pageHref } from "@/lib/data";
 
-// rebuilt at most every 10 minutes, and right away when an editor publishes or changes something
-export const revalidate = 600;
-
+// built on every request (a few small queries), so search engines always see the current articles
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
   const supabase = createPublicClient();
   const [{ data: issues }, { data: articles }, { data: news }, { data: pages }, { data: conferences }] = await Promise.all([
     supabase.from("issues").select("id, published_at").eq("status", "published"),
