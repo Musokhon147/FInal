@@ -15,7 +15,10 @@ async function staff() {
   if (!s.user || !isStaff(s.profile)) throw new Error("Forbidden");
   return s;
 }
-const done = () => revalidatePath("/[locale]", "layout");
+const done = () => {
+  revalidatePath("/[locale]", "layout");
+  revalidatePath("/sitemap.xml"); // search engines see new and removed pages at once
+};
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const int = (f: FormData, k: string) => (str(f, k) ? Number.parseInt(str(f, k), 10) : null);
 const i18n = (f: FormData, k: string) => ({ uz: str(f, `${k}_uz`), ru: str(f, `${k}_ru`), en: str(f, `${k}_en`) });

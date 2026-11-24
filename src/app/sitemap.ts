@@ -2,8 +2,10 @@ import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
 import { createPublicClient } from "@/lib/supabase/public";
 import { SITE_URL, articleLocale } from "@/lib/site";
+import { pageHref } from "@/lib/data";
 
-export const revalidate = 3600;
+// rebuilt at most every 10 minutes, and right away when an editor publishes or changes something
+export const revalidate = 600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createPublicClient();
@@ -27,12 +29,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/news", null, 0.5),
     entry("/conferences", null, 0.6),
     entry("/explore", null, 0.4),
+    entry("/current", null, 0.7),
+    entry("/current/conferences", null, 0.6),
     ...((issues ?? []) as { id: string; published_at: string | null }[]).map((i) => entry(`/issue/${i.id}`, i.published_at, 0.7)),
     // each article under its own language: the address Google Scholar and the DOI use
     ...((articles ?? []) as { id: string; language: string; published_at: string | null; updated_at?: string }[])
       .map((a) => entry(`/article/${a.id}`, a.updated_at ?? a.published_at, 0.9, articleLocale(a.language))),
     ...((news ?? []) as { id: string; date: string }[]).map((n) => entry(`/news/${n.id}`, n.date, 0.4)),
-    ...((pages ?? []) as { slug: string; updated_at?: string }[]).map((p) => entry(`/p/${p.slug}`, p.updated_at, 0.5)),
+    ...((pages ?? []) as { slug: string; updated_at?: string }[]).map((p) => entry(pageHref(p.slug), p.updated_at, 0.5)),
     ...((conferences ?? []) as { id: string; updated_at?: string }[]).map((c) => entry(`/conferences/${c.id}`, c.updated_at, 0.6)),
   ];
 }
