@@ -49,6 +49,7 @@ export interface Journal {
   issn_online: string | null;
   doi_prefix?: string | null;
   doi_auto?: boolean;
+  doi_provider?: "crossref" | "zenodo" | null;
   google_verification?: string | null;
   publisher: string | null;
   cover_url: string | null;
@@ -160,6 +161,7 @@ export interface Article {
   doi: string | null;
   doi_status?: "none" | "queued" | "registered" | "failed";
   doi_message?: string | null;
+  zenodo_id?: number | null;
   pdf_path: string | null;
   license: string;
   sort_order: number;

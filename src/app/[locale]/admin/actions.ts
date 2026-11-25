@@ -193,7 +193,7 @@ export async function updateArticle(formData: FormData) {
   const { supabase, user } = await staff();
   const id = str(formData, "id");
   const doi = doiField(str(formData, "doi"));
-  const { data: before } = await supabase.from("articles").select("doi, doi_status, status").eq("id", id).maybeSingle();
+  const { data: before } = await supabase.from("articles").select("doi, doi_status, status, zenodo_id").eq("id", id).maybeSingle();
   const doiChanged = (before?.doi ?? null) !== doi;
   const { error } = await supabase
     .from("articles")
@@ -214,16 +214,24 @@ export async function updateArticle(formData: FormData) {
     })
     .eq("id", id);
   if (error) throw new Error(error.message);
-  // a registered DOI keeps Crossref's copy of the details up to date (updates are free)
-  if (crossrefConfigured() && doi && before?.status === "published" && (doiChanged || before.doi_status === "registered")) {
+  // a registered DOI keeps Zenodo's / Crossref's copy of the details up to date (updates are free)
+  if (before?.zenodo_id && before.status === "published" && before.doi_status === "registered" && !doiChanged) {
+    after(async () => {
+      const z = await import("@/lib/zenodo");
+      if (z.zenodoConfigured()) await z.registerZenodo(createAdminClient() ?? supabase, [id]).catch(() => {});
+    });
+  } else if (crossrefConfigured() && doi && before?.status === "published" && (doiChanged || before.doi_status === "registered")) {
     after(() => registerDois(createAdminClient() ?? supabase, [id], user?.id).catch(() => {}));
   }
   done();
 }
 
 export async function setArticlePdf(id: string, pdfPath: string, fullText?: string | null) {
-  const { supabase } = await staff();
+  const { supabase, user } = await staff();
+  const { data: a } = await supabase.from("articles").select("status, doi").eq("id", id).maybeSingle();
   await supabase.from("articles").update({ pdf_path: pdfPath, full_text: fullText?.slice(0, 200_000) || null }).eq("id", id);
+  // with Zenodo, a published article gets its DOI as soon as it has a PDF
+  if (a?.status === "published" && !a.doi) doiAfterPublish(supabase, [id], user?.id);
   done();
 }
 
@@ -267,7 +275,7 @@ export async function savePage(formData: FormData) {
 export async function saveSettings(input: {
   title: Record<string, string>; description: Record<string, string>; issn_online: string; issn_print?: string; publisher: string;
   contact_email: string; indexes: string[]; cfp_deadline: string | null; cfp_text: Record<string, string>; logo_url?: string | null;
-  doi_prefix?: string; doi_auto?: boolean; google_verification?: string;
+  doi_prefix?: string; doi_auto?: boolean; google_verification?: string; doi_provider?: string;
 }): Promise<{ error?: "bad-issn-online" | "bad-issn-print" | "bad-prefix" | "bad-google" }> {
   const { supabase, profile } = await staff();
   if (profile?.role !== "admin") throw new Error("Forbidden");
@@ -285,6 +293,7 @@ export async function saveSettings(input: {
   const row: Record<string, unknown> = {
     ...input, issn_online: issnOnline || null, issn_print: issnPrint || null, doi_prefix: prefix || null, doi_auto: input.doi_auto ?? true,
     google_verification: google || null,
+    doi_provider: ["crossref", "zenodo"].includes(String(input.doi_provider)) ? input.doi_provider : null,
   };
   if (input.logo_url === undefined) delete row.logo_url;
   const { error } = await supabase.from("journals").update(row).eq("id", j!.id);

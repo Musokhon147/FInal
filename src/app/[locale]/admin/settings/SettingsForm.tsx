@@ -32,6 +32,7 @@ export default function SettingsForm({ journal }: { journal: Journal }) {
         issn_online: String(fd.get("issn_online") ?? ""), issn_print: String(fd.get("issn_print") ?? ""),
         doi_prefix: String(fd.get("doi_prefix") ?? ""), doi_auto: fd.get("doi_auto") === "on",
         google_verification: String(fd.get("google_verification") ?? ""),
+        doi_provider: String(fd.get("doi_provider") ?? ""),
         publisher: String(fd.get("publisher") ?? ""),
         contact_email: String(fd.get("contact_email") ?? ""),
         indexes: String(fd.get("indexes") ?? "").split(",").map((x) => x.trim()).filter(Boolean),
@@ -82,6 +83,16 @@ export default function SettingsForm({ journal }: { journal: Journal }) {
           <label><span className="label">{t("ix.doiPrefix")}</span>
             <input name="doi_prefix" defaultValue={journal.doi_prefix ?? ""} placeholder="10.12345" aria-invalid={fieldError === "bad-prefix" || undefined} className="input" /></label>
         </div>
+        <fieldset className="space-y-1.5">
+          <legend className="label">{t("ix.providerLabel")}</legend>
+          {([["", "ix.provNone"], ["zenodo", "ix.provZenodo"], ["crossref", "ix.provCrossref"]] as const).map(([v, k]) => (
+            <label key={v || "none"} className="flex items-start gap-2 text-sm text-slate-700">
+              <input type="radio" name="doi_provider" value={v} className="mt-1"
+                defaultChecked={(journal.doi_provider ?? (journal.doi_prefix ? "crossref" : "")) === v} />
+              <span>{t(k)}</span>
+            </label>
+          ))}
+        </fieldset>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" name="doi_auto" defaultChecked={journal.doi_auto ?? true} /> {t("ix.doiAuto")}
         </label>

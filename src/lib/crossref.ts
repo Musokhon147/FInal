@@ -21,7 +21,7 @@ const host = () => (crossrefTest() ? "https://test.crossref.org" : "https://doi.
 
 export type DepositJournal = {
   id: string; slug: string; title: I18nText; publisher: string | null; contact_email: string | null;
-  issn_online: string | null; issn_print: string | null; doi_prefix: string | null; doi_auto?: boolean;
+  issn_online: string | null; issn_print: string | null; doi_prefix: string | null; doi_auto?: boolean; doi_provider?: string | null;
 };
 type Conf = { title: I18nText; location: I18nText | null; start_date: string; end_date: string | null };
 type Iss = {
@@ -37,7 +37,7 @@ export type DepositArticle = {
 export const DEPOSIT_SELECT =
   "id, title, title_i18n, abstract, language, doi, status, authors, references, first_page, last_page, published_at, license, " +
   "issues(id, number, is_special, published_at, title, conference_id, volumes(number, year), conferences(title, location, start_date, end_date))";
-export const JOURNAL_SELECT = "id, slug, title, publisher, contact_email, issn_online, issn_print, doi_prefix, doi_auto";
+export const JOURNAL_SELECT = "id, slug, title, publisher, contact_email, issn_online, issn_print, doi_prefix, doi_auto, doi_provider";
 
 /* ------------------------------------------------------------------ XML */
 
@@ -317,8 +317,17 @@ export async function checkDeposits(db: Db): Promise<{ checked: number; register
  */
 export async function afterPublish(db: Db, articleIds: string[], userId?: string | null) {
   if (!articleIds.length) return;
-  const { data: j } = await db.from("journals").select("doi_prefix, doi_auto").eq("is_active", true).order("sort_order").limit(1).maybeSingle();
-  if (!j || !isDoiPrefix(j.doi_prefix as string)) return;
+  const { data: j } = await db.from("journals").select("doi_prefix, doi_auto, doi_provider").eq("is_active", true).order("sort_order").limit(1).maybeSingle();
+  if (!j) return;
+  if (j.doi_provider === "zenodo") {
+    // Zenodo gives the DOI itself (articles without a PDF wait until one is added)
+    if (j.doi_auto !== false) {
+      const z = await import("@/lib/zenodo");
+      if (z.zenodoConfigured()) await z.registerZenodo(db, articleIds);
+    }
+    return;
+  }
+  if (!isDoiPrefix(j.doi_prefix as string)) return;
   if (j.doi_auto) await assignDois(db, articleIds);
   if (crossrefConfigured()) await registerDois(db, articleIds, userId);
 }

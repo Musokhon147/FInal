@@ -5,18 +5,20 @@ import { getSession } from "@/lib/auth";
 import { getJournal } from "@/lib/data";
 import { SITE_URL } from "@/lib/site";
 import { crossrefConfigured, crossrefTest } from "@/lib/crossref";
+import { zenodoConfigured, zenodoSandbox } from "@/lib/zenodo";
+import ZenodoActions from "./ZenodoActions";
 import { isDoi, isDoiPrefix, isIssn } from "@/lib/identifiers";
 import CopyField from "./CopyField";
 import DoiActions from "./DoiActions";
 
 type Row = {
   id: string; title: string; doi: string | null; doi_status: string; doi_message: string | null; published_at: string | null;
-  abstract: string; authors: { name: string }[]; pdf_path: string | null;
+  abstract: string; authors: { name: string }[]; pdf_path: string | null; zenodo_id: number | null;
 };
 type Problem = "noAbstract" | "noAuthors" | "noPdf" | "bigPdf" | "dupTitle";
 const PDF_LIMIT = 5 * 1024 * 1024;
 type Dep = { id: number; file_name: string; article_ids: string[]; test: boolean; status: string; success: number; failure: number; message: string | null; created_at: string };
-type RowState = "noDoi" | "bad" | "other" | "none" | "queued" | "registered" | "failed";
+type RowState = "noDoi" | "noPdf" | "bad" | "other" | "none" | "queued" | "registered" | "failed";
 
 function Pill({ ok, partly, children }: { ok: boolean; partly?: boolean; children: React.ReactNode }) {
   const cls = ok ? "bg-accent/15 text-accent" : partly ? "bg-brand-600/15 text-brand-700" : "bg-slate-200 text-slate-600";
@@ -46,7 +48,7 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
   const admin = profile?.role === "admin";
   const journal = await getJournal();
   const [{ data: arts }, { data: deps }, { data: sizeRows }] = await Promise.all([
-    supabase.from("articles").select("id, title, doi, doi_status, doi_message, published_at, abstract, authors, pdf_path").eq("status", "published").order("published_at", { ascending: false }).limit(1000),
+    supabase.from("articles").select("id, title, doi, doi_status, doi_message, published_at, abstract, authors, pdf_path, zenodo_id").eq("status", "published").order("published_at", { ascending: false }).limit(1000),
     supabase.from("crossref_deposits").select("id, file_name, article_ids, test, status, success, failure, message, created_at").order("created_at", { ascending: false }).limit(8),
     supabase.rpc("article_pdf_sizes"),
   ]);
@@ -73,12 +75,20 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
   const prefix = isDoiPrefix(journal?.doi_prefix) ? journal!.doi_prefix! : null;
   const connected = crossrefConfigured();
   const test = connected && crossrefTest();
+  const provider = journal?.doi_provider ?? (prefix ? "crossref" : null);
+  const zOn = zenodoConfigured(), zTest = zOn && zenodoSandbox();
   const issns = [
     isIssn(journal?.issn_online) ? { n: journal!.issn_online!, kind: t("issnOnline") } : null,
     isIssn(journal?.issn_print) ? { n: journal!.issn_print!, kind: t("issnPrint") } : null,
   ].filter(Boolean) as { n: string; kind: string }[];
 
   const state = (r: Row): RowState => {
+    if (provider === "zenodo") {
+      if (r.doi_status === "failed") return "failed";
+      if (!r.doi) return r.pdf_path ? "none" : "noPdf";
+      if (!isDoi(r.doi)) return "bad";
+      return r.zenodo_id ? "registered" : "other";
+    }
     if (!r.doi) return "noDoi";
     if (!isDoi(r.doi)) return "bad";
     if (prefix && !r.doi.toLowerCase().startsWith(`${prefix.toLowerCase()}/`)) return "other";
@@ -91,7 +101,7 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
   const oai = `${SITE_URL}/oai`;
   const fmt = new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : locale === "en" ? "en-GB" : "uz-Latn-UZ", { dateStyle: "short", timeStyle: "short" });
   const stCls: Record<RowState, string> = {
-    noDoi: "text-slate-500", bad: "text-red-400", other: "text-slate-500", none: "text-slate-600",
+    noDoi: "text-slate-500", noPdf: "text-slate-500", bad: "text-red-400", other: "text-slate-500", none: "text-slate-600",
     queued: "text-brand-700", registered: "text-accent", failed: "text-red-400",
   };
 
@@ -211,11 +221,32 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
       <section className="card space-y-5" aria-labelledby="ix-doi">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="ix-doi" className="text-xl">{t("doiTitle")}</h2>
-          <Pill ok={!!prefix && connected && !test} partly={!!prefix || connected}>
-            {prefix && connected && !test ? t("on") : prefix || connected ? t("partly") : t("notYet")}
+          <Pill ok={provider === "zenodo" ? zOn && !zTest : !!prefix && connected && !test} partly={!!provider || connected || zOn}>
+            {(provider === "zenodo" ? zOn && !zTest : !!prefix && connected && !test) ? t("on") : provider || connected || zOn ? t("partly") : t("notYet")}
           </Pill>
         </div>
         <p className="max-w-2xl text-sm text-slate-600">{t("doiText")}</p>
+        {!provider && (
+          <p className="max-w-2xl rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-700">
+            {t("doiChoose")} {admin && <Link className={ext} href="/admin/settings">{t("toSettings")}</Link>}
+          </p>
+        )}
+        {provider === "zenodo" && (
+          <ol className="space-y-4">
+            <Step done={zOn} title={t("z1")}>
+              <p>{t("z1Text")}</p>
+              <a className={ext} href="https://zenodo.org/signup/" target="_blank" rel="noreferrer">{t("z1Link")} ↗</a>
+            </Step>
+            <Step done={zOn} title={t("z2")}>
+              {zOn
+                ? <p className={zTest ? "text-brand-700" : "text-accent"}>{zTest ? t("z2Test") : t("z2Done")}</p>
+                : <p>{t.rich("z2Text", { code: (c) => <code className="rounded bg-slate-100 px-1 text-slate-900">{c}</code> })}</p>}
+            </Step>
+            <Step done title={t("z3")}><p>{t("z3Done")}</p></Step>
+            <Step done={zOn && registered > 0} title={t("z4")}>{t("z4Text")}</Step>
+          </ol>
+        )}
+        {provider === "crossref" && (
         <ol className="space-y-4">
           <Step done={!!prefix} title={t("s1")}>
             <p>{t("s1Text")}</p>
@@ -231,11 +262,16 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
           </Step>
           <Step done={!!prefix && connected && registered > 0} title={t("s4")}>{t("s4Text")}</Step>
         </ol>
+        )}
 
         {rows.length > 0 && (
           <>
-            <DoiActions withoutDoi={prefix ? counts.noDoi ?? 0 : 0} waiting={(counts.none ?? 0) + (counts.failed ?? 0)} withDoi={own}
-              prefix={!!prefix} connected={connected} openFiles={deposits.filter((d) => d.status === "submitted").length} />
+            {provider === "zenodo"
+              ? <ZenodoActions ready={(counts.none ?? 0) + (counts.failed ?? 0)} needPdf={counts.noPdf ?? 0} connected={zOn} />
+              : provider === "crossref" && (
+                <DoiActions withoutDoi={prefix ? counts.noDoi ?? 0 : 0} waiting={(counts.none ?? 0) + (counts.failed ?? 0)} withDoi={own}
+                  prefix={!!prefix} connected={connected} openFiles={deposits.filter((d) => d.status === "submitted").length} />
+              )}
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full min-w-[640px] text-sm">
                 <thead><tr className="border-b border-slate-200 text-left text-slate-500">
@@ -268,7 +304,7 @@ export default async function IndexingPage({ params }: PageProps<"/[locale]/admi
         )}
         {!rows.length && <p className="text-sm text-slate-500">{t("noArticles")}</p>}
 
-        {deposits.length > 0 && (
+        {provider === "crossref" && deposits.length > 0 && (
           <details className="text-sm">
             <summary className="cursor-pointer font-semibold text-slate-700">{t("deposits")}</summary>
             <ul className="mt-2 space-y-2">

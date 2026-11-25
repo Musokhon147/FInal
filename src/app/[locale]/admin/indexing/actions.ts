@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession, isStaff } from "@/lib/auth";
 import { assignDois, checkDeposits, crossrefConfigured, registerDois } from "@/lib/crossref";
+import { registerZenodo, zenodoConfigured } from "@/lib/zenodo";
 import { isDoi } from "@/lib/identifiers";
 
 async function staff() {
@@ -47,6 +48,21 @@ export async function sendToCrossref(mode: "waiting" | "all" | string[] = "waiti
   }
   done();
   return error && !sent ? { error } : { sent };
+}
+
+/** "Get DOIs from Zenodo": every published article with a PDF and no DOI yet (or a failed try). */
+export async function sendToZenodo() {
+  const { supabase } = await staff();
+  const { data: j } = await supabase.from("journals").select("doi_provider").eq("is_active", true).order("sort_order").limit(1).maybeSingle();
+  if (j?.doi_provider !== "zenodo") return { error: "not-zenodo" as const, sent: 0, failed: 0 };
+  if (!zenodoConfigured()) return { error: "not-configured" as const, sent: 0, failed: 0 };
+  const { data } = await supabase.from("articles").select("id, doi, doi_status, pdf_path").eq("status", "published").limit(5000);
+  const ids = ((data ?? []) as { id: string; doi: string | null; doi_status: string; pdf_path: string | null }[])
+    .filter((a) => a.pdf_path && (!a.doi || a.doi_status === "failed")).map((a) => a.id);
+  if (!ids.length) return { error: "nothing-ready" as const, sent: 0, failed: 0 };
+  const r = await registerZenodo(supabase, ids);
+  done();
+  return r;
 }
 
 /** Asks Crossref for the results of files still waiting. */

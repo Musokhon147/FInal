@@ -67,6 +67,7 @@ A yellow banner shows the site is in demo mode. Changes are kept in memory and r
    - `supabase/migrations/20261118040000_submitted_at_for_staff.sql` (submission date also for staff)
    - `supabase/migrations/20261121000000_doi_issn_indexing.sql` (DOI prefix and status, Crossref deposit log)
    - `supabase/migrations/20261121010000_scholar_readiness.sql` (Search Console code, PDF sizes for the Scholar check)
+   - `supabase/migrations/20261125000000_zenodo_doi.sql` (DOI provider: Crossref or Zenodo)
 3. **Environment variables**: in Vercel → Project → Settings → Environment Variables (or `.env.local` locally) set
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Supabase → Project Settings → API,
    then redeploy. The demo banner disappears and the site uses the real database.
@@ -125,6 +126,10 @@ Admin → **Indexing, DOI & ISSN** shows what is set up and what is left.
   | `CROSSREF_TEST=1` | optional: send to test.crossref.org instead |
   | `CROSSREF_EMAIL` | optional: depositor email when the journal has no contact email |
 
+- **DOI (Zenodo)**, free and without an organisation: choose Zenodo in Settings. Each published article with a PDF
+  is uploaded to Zenodo and gets a DOI on Zenodo's prefix (`10.5281/zenodo.N`), saved on the article; edits update the
+  same record. Variables: `ZENODO_TOKEN` (Secret; scopes `deposit:write`, `deposit:actions`), optional `ZENODO_SANDBOX=1`
+  (sandbox.zenodo.org, test DOIs) and `ZENODO_COMMUNITY`.
   A daily job (`/api/cron/crossref`, needs `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY`) reads Crossref's results.
   Without a login, the page offers the deposit XML to upload by hand.
 
